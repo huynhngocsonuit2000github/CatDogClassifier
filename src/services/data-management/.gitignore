@@ -1,0 +1,6 @@
+# Data Management service — ignore runtime/local artifacts
+data/
+.venv/
+__pycache__/
+*.pyc
+.env

@@ -1,0 +1,7 @@
+# Data Management service dependencies.
+# DVC itself is installed separately (see README): pip install "dvc[s3]"
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+boto3>=1.34
+pillow>=10.0
