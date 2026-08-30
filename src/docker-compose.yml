@@ -1,4 +1,4 @@
-# Step 1 infra: MinIO (S3 store) + the Data Management service.
+# MLOps infra: MinIO (S3 store), MLflow (tracking), and the services.
 services:
   minio:
     image: minio/minio:latest
@@ -31,6 +31,27 @@ services:
       - data_repo:/app/data
     restart: on-failure
 
+  # MLflow tracking server (Step 2). SQLite backend + volume artifacts;
+  # upgraded to PostgreSQL + MinIO artifacts in Step 5.
+  #
+  # Pinned to 2.22.4 (last 2.x): the plan's later steps rely on classic
+  # `models:/CatDogClassifier/Production` URIs + mlflow.register_model, which
+  # MLflow 3.x replaced with "logged models" and doesn't store model files
+  # as run artifacts on a plain filesystem root.
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.22.4
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:///mlflow/mlflow.db
+      --artifacts-destination /mlflow/mlartifacts
+      --serve-artifacts
+    ports:
+      - "5000:5000"   # MLflow UI + tracking API (http://localhost:5000)
+    volumes:
+      - mlflow_store:/mlflow
+    restart: on-failure
+
 volumes:
   minio_data:
   data_repo:
+  mlflow_store:
