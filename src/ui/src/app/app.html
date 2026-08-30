@@ -1,0 +1,49 @@
+<div class="app">
+  <aside class="sidebar" [class.collapsed]="!sidebarOpen()">
+    <div class="brand">
+      <span class="brand-mark"><app-icon name="sparkles" [size]="18" /></span>
+      <span>CatDog MLOps</span>
+    </div>
+
+    <nav class="nav">
+      @for (item of nav; track item.path) {
+        <a
+          class="nav-item"
+          [routerLink]="item.path"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: item.path === '/' }"
+        >
+          <app-icon [name]="item.icon" [size]="18" />
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <p class="sidebar-foot">Demo data · mock services</p>
+  </aside>
+
+  <div class="main-area">
+    <header class="topbar">
+      <button class="icon-btn" (click)="toggleSidebar()" aria-label="Toggle sidebar">
+        <app-icon name="panelLeft" />
+      </button>
+      <h2 class="topbar-title">{{ pageTitle() }}</h2>
+
+      <div class="topbar-actions">
+        @if (store.production(); as prod) {
+          <span class="pill">
+            <span class="pill-dot"></span>
+            Production: {{ prod.version }} · acc {{ prod.accuracy }}%
+          </span>
+        }
+        <button class="icon-btn" (click)="toggleTheme()" aria-label="Toggle color theme">
+          <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" />
+        </button>
+      </div>
+    </header>
+
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

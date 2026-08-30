@@ -1,0 +1,92 @@
+<div class="page-head">
+  <h1 class="page-title">Predict</h1>
+  <p class="page-sub">Upload an image to get a cat / dog prediction from the serving model.</p>
+</div>
+
+<div class="serve-banner mb-16">
+  <span class="pill-dot"></span>
+  <span>Serving: <strong>{{ serving() }}</strong></span>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="form-stack">
+      <label
+        class="dropzone"
+        [class.dragover]="dragging()"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave()"
+        (drop)="onDrop($event)"
+      >
+        <app-icon name="upload" [size]="22" />
+        <div>{{ fileName() ?? 'Drop an image here' }}</div>
+        <div style="font-size: 12px">or click to choose a file</div>
+        <input type="file" accept="image/*" style="display: none" (change)="onFileInput($event)" />
+      </label>
+
+      @if (previewUrl()) {
+        <img
+          [src]="previewUrl()"
+          alt="Uploaded preview"
+          style="width: 100%; border-radius: 12px; border: 1px solid var(--border)"
+        />
+      }
+
+      <button class="btn btn-primary" [disabled]="!fileName()" (click)="predict()">Predict</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="card-label">Result</p>
+    @if (result(); as r) {
+      <div class="result-card">
+        <div class="result-label">{{ r.result }}</div>
+        <div class="stat-label">Confidence</div>
+        <div class="row" style="gap: 12px; margin-top: 6px">
+          <div class="confidence-track grow">
+            <div class="confidence-fill" [style.width.%]="r.confidence * 100"></div>
+          </div>
+          <strong>{{ (r.confidence * 100).toFixed(0) }}%</strong>
+        </div>
+        <p class="text-muted" style="margin-top: 12px; font-size: 12px">
+          Serving model: {{ r.modelVersion }}
+        </p>
+      </div>
+    } @else {
+      <p class="text-muted">Upload an image and run a prediction to see the result here.</p>
+    }
+  </div>
+</div>
+
+<div class="card" style="margin-top: 16px">
+  <p class="card-label">Recent predictions</p>
+  <h3 class="card-title">History</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Image</th>
+          <th>Result</th>
+          <th>Confidence</th>
+          <th>Model</th>
+          <th>When</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of store.predictions(); track p.id) {
+          <tr>
+            <td>{{ p.imageName }}</td>
+            <td>
+              <span class="badge" [class.info]="p.result === 'cat'" [class.warning]="p.result === 'dog'">
+                {{ p.result }}
+              </span>
+            </td>
+            <td>{{ (p.confidence * 100).toFixed(0) }}%</td>
+            <td>{{ p.modelVersion }}</td>
+            <td>{{ formatLong(p.createdAt) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

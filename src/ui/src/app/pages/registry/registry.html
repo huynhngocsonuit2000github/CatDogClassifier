@@ -1,0 +1,62 @@
+<div class="page-head">
+  <h1 class="page-title">Registered models</h1>
+  <p class="page-sub">Approve candidates into staging, reject failures, promote the winner to production.</p>
+</div>
+
+<div class="model-grid">
+  @for (m of store.models(); track m.name + '-' + m.version) {
+    <article class="model-card">
+      <div class="model-card-head">
+        <div>
+          <h3 class="model-name">{{ m.name }} {{ m.version }}</h3>
+          <p class="model-sub">from {{ m.runId }} · dataset {{ m.datasetVersion }} · {{ m.sizeMb }} MB</p>
+        </div>
+        <span
+          class="badge"
+          [class.success]="m.stage === 'Production'"
+          [class.warning]="m.stage === 'Staging'"
+          [class.info]="m.stage === 'Pending'"
+          [class.danger]="m.stage === 'Rejected'"
+          [class.neutral]="m.stage === 'Archived'"
+        >
+          {{ m.stage }}
+        </span>
+      </div>
+
+      <div class="model-metrics">
+        <div class="stat">
+          <span class="stat-label">Accuracy</span>
+          <span class="stat-value">{{ m.accuracy }}%</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Loss</span>
+          <span class="stat-value">{{ m.loss }}</span>
+        </div>
+      </div>
+
+      <div class="model-actions">
+        <button
+          class="btn btn-outline btn-sm"
+          [disabled]="!canApprove(m)"
+          (click)="store.approve(m.name, m.version)"
+        >
+          Approve
+        </button>
+        <button
+          class="btn btn-sm btn-danger"
+          [disabled]="!canReject(m)"
+          (click)="store.reject(m.name, m.version)"
+        >
+          Reject
+        </button>
+        <button
+          class="btn btn-primary btn-sm"
+          [disabled]="!canPromote(m)"
+          (click)="store.promote(m.name, m.version)"
+        >
+          Promote to production
+        </button>
+      </div>
+    </article>
+  }
+</div>

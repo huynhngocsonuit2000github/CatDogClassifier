@@ -1,0 +1,85 @@
+<div class="page-head">
+  <h1 class="page-title">Datasets</h1>
+  <p class="page-sub">Versioned image sets used for training and evaluation.</p>
+</div>
+
+<div class="data-layout">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Version</th>
+          <th>Images</th>
+          <th>Cat / Dog balance</th>
+          <th>Size</th>
+          <th>Status</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (d of store.datasets(); track d.version) {
+          <tr>
+            <td>
+              <div class="ds-name">{{ d.version }}</div>
+              <div class="ds-label">{{ d.name }}</div>
+            </td>
+            <td>{{ d.images.toLocaleString('en-US') }}</td>
+            <td>
+              <div class="row">
+                <div class="split-bar">
+                  <div class="split-bar-cat" [style.width.%]="catPercent(d)"></div>
+                  <div class="split-bar-dog" [style.width.%]="100 - catPercent(d)"></div>
+                </div>
+                <span class="split-label">{{ catPercent(d) }}% cat · {{ 100 - catPercent(d) }}% dog</span>
+              </div>
+            </td>
+            <td>{{ d.sizeMb }} MB</td>
+            <td>
+              <span
+                class="badge"
+                [class.success]="d.status === 'validated'"
+                [class.warning]="d.status === 'validating'"
+                [class.pulse]="d.status === 'validating'"
+              >
+                <span class="badge-dot"></span>{{ d.status }}
+              </span>
+            </td>
+            <td>{{ formatShort(d.createdAt) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <aside class="card">
+    <h3 class="card-title mt-0">Upload &amp; validate</h3>
+    <p class="card-label" style="margin: -10px 0 16px">
+      Creates a new dataset version and runs schema + class-balance checks.
+    </p>
+
+    <div class="form-stack">
+      <div class="dropzone">
+        <app-icon name="upload" [size]="22" />
+        <div>Drop a .zip of labelled images</div>
+        <div style="font-size: 12px">or click to browse</div>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Version note</span>
+        <input
+          class="input"
+          placeholder="e.g. September community batch"
+          [value]="note()"
+          (input)="onNoteInput($event)"
+        />
+      </div>
+
+      <div class="field">
+        <span class="field-label">Image count</span>
+        <input class="input" type="number" [value]="imageCount()" (input)="onCountInput($event)" />
+      </div>
+
+      <button class="btn btn-primary" (click)="upload()">Upload &amp; validate</button>
+    </div>
+  </aside>
+</div>

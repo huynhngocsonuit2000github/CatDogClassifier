@@ -1,0 +1,98 @@
+<div class="kpi-grid">
+  @for (k of kpis(); track k.label) {
+    <div class="kpi">
+      <div class="kpi-top">
+        <span>{{ k.label }}</span>
+        <span class="kpi-icon"><app-icon [name]="k.icon" [size]="16" /></span>
+      </div>
+      <div class="kpi-value">{{ k.value }}</div>
+      <div class="kpi-hint">↗ {{ k.hint }}</div>
+    </div>
+  }
+</div>
+
+<div class="grid-2 mb-16">
+  <div class="card">
+    <p class="card-label">Production model</p>
+    @if (store.production(); as prod) {
+      <h3 class="card-title">{{ prod.name }} {{ prod.version }}</h3>
+      <div class="prod-stats">
+        <div class="stat">
+          <span class="stat-label">Accuracy</span>
+          <span class="stat-value">{{ prod.accuracy }}%</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Loss</span>
+          <span class="stat-value">{{ prod.loss }}</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Source run</span>
+          <span class="stat-value">{{ prod.runId }}</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Dataset</span>
+          <span class="stat-value">{{ prod.datasetVersion }}</span>
+        </div>
+      </div>
+      <a class="btn btn-outline btn-sm" style="margin-top: 16px" routerLink="/registry">
+        View registry
+      </a>
+    }
+  </div>
+
+  <div class="card">
+    <p class="card-label">Accuracy over time</p>
+    <h3 class="card-title">Best run accuracy by sequence</h3>
+    <svg viewBox="0 0 640 240" role="img" aria-label="Best run accuracy by sequence">
+      @for (t of render().ticks; track t.value) {
+        <line x1="30" x2="628" [attr.y1]="t.y" [attr.y2]="t.y" class="gridline" />
+        <text x="24" [attr.y]="t.y + 3" text-anchor="end" class="tick">{{ t.value }}</text>
+      }
+      <polygon [attr.points]="render().area" style="fill: var(--primary)" fill-opacity="0.12" />
+      <polyline
+        [attr.points]="render().line"
+        style="stroke: var(--primary)"
+        fill="none"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      @for (t of render().xticks; track t.label) {
+        <text [attr.x]="t.x" y="234" text-anchor="middle" class="tick">{{ t.label }}</text>
+      }
+    </svg>
+  </div>
+</div>
+
+<div class="card">
+  <p class="card-label">Recent runs</p>
+  <h3 class="card-title">Last 5 training runs</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Dataset</th>
+          <th>Accuracy</th>
+          <th>Status</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of recentRuns(); track r.id) {
+          <tr>
+            <td>{{ r.name }}</td>
+            <td>{{ r.datasetVersion }}</td>
+            <td>{{ r.accuracy != null ? r.accuracy + '%' : '—' }}</td>
+            <td>
+              <span class="badge" [class.success]="r.status === 'finished'" [class.danger]="r.status === 'failed'" [class.info]="r.status === 'running'">
+                {{ r.status }}
+              </span>
+            </td>
+            <td>{{ formatLong(r.createdAt) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

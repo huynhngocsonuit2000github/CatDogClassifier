@@ -1,0 +1,116 @@
+<div class="page-head">
+  <h1 class="page-title">Training runs</h1>
+  <p class="page-sub">Launch new experiments and compare up to 3 runs.</p>
+</div>
+
+<div class="train-layout">
+  <aside class="card">
+    <h3 class="card-title mt-0">New run</h3>
+    <div class="form-stack">
+      <div class="field">
+        <span class="field-label">Architecture</span>
+        <select class="select" (change)="onArchInput($event)">
+          @for (a of arches; track a) {
+            <option [value]="a" [selected]="a === arch()">{{ a }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Dataset version</span>
+        <select class="select" (change)="onDatasetInput($event)">
+          @for (d of store.datasets(); track d.version) {
+            <option [value]="d.version" [selected]="d.version === datasetVersion()">{{ d.version }} · {{ d.images.toLocaleString('en-US') }} images</option>
+          }
+        </select>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <span class="field-label">Epochs</span>
+          <input class="input" type="number" [value]="epochs()" (input)="onEpochs($event)" />
+        </div>
+        <div class="field">
+          <span class="field-label">Batch size</span>
+          <input class="input" type="number" [value]="batchSize()" (input)="onBatch($event)" />
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Learning rate</span>
+        <input class="input" [value]="learningRate()" (input)="onLr($event)" />
+      </div>
+
+      <button class="btn btn-primary" (click)="startTraining()">Start training</button>
+    </div>
+  </aside>
+
+  <div class="card">
+    <div class="row-between" style="margin-bottom: 12px">
+      <h3 class="card-title mt-0">All runs</h3>
+      <span class="text-muted">{{ selected().length }}/3 selected to compare</span>
+    </div>
+
+    @if (selectedRuns().length > 0) {
+      <div class="card" style="margin-bottom: 14px; background: var(--primary-soft)">
+        <div class="row" style="gap: 28px; flex-wrap: wrap">
+          @for (r of selectedRuns(); track r.id) {
+            <div class="stat">
+              <span class="stat-label">{{ r.name }}</span>
+              <span class="stat-value">{{ r.accuracy != null ? r.accuracy + '%' : '—' }}</span>
+              <span class="text-muted" style="font-size: 12px">loss {{ r.loss ?? '—' }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Run</th>
+            <th>Arch</th>
+            <th>Dataset</th>
+            <th>Acc</th>
+            <th>Loss</th>
+            <th>Status</th>
+            <th>Started</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of store.runs(); track r.id) {
+            <tr>
+              <td>
+                <input
+                  type="checkbox"
+                  [checked]="selected().includes(r.id)"
+                  [disabled]="isDisabled(r.id)"
+                  (change)="toggleSelect(r.id)"
+                />
+              </td>
+              <td>{{ r.name }}</td>
+              <td>{{ r.arch }}</td>
+              <td>{{ r.datasetVersion }}</td>
+              <td>{{ r.accuracy != null ? r.accuracy + '%' : '—' }}</td>
+              <td>{{ r.loss != null ? r.loss : '—' }}</td>
+              <td>
+                <span
+                  class="badge"
+                  [class.success]="r.status === 'finished'"
+                  [class.danger]="r.status === 'failed'"
+                  [class.info]="r.status === 'running'"
+                  [class.pulse]="r.status === 'running'"
+                >
+                  <span class="badge-dot"></span>{{ r.status }}
+                </span>
+              </td>
+              <td>{{ formatShort(r.createdAt) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
