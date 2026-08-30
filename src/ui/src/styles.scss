@@ -791,6 +791,26 @@ a {
   gap: 8px;
 }
 
+.form-error {
+  font-size: 13px;
+  color: var(--danger);
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--danger) 10%, transparent);
+}
+
+.dz-name {
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--muted-fg);
+  font-size: 13px;
+}
+
 .badge {
   text-transform: capitalize;
 }

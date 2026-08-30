@@ -1,4 +1,4 @@
-export type DatasetStatus = 'validated' | 'validating';
+export type DatasetStatus = 'validated' | 'validating' | 'failed' | 'invalid';
 export type RunStatus = 'running' | 'finished' | 'failed';
 export type ModelStage = 'Pending' | 'Staging' | 'Production' | 'Archived' | 'Rejected';
 export type Arch = 'mobilenetv2' | 'resnet50' | 'efficientnetb0';
@@ -9,9 +9,10 @@ export interface DatasetVersion {
   images: number;
   cats: number;
   dogs: number;
-  sizeMb: number;
   status: DatasetStatus;
   createdAt: Date;
+  warnings?: string[];
+  dvcFile?: string; // repo-relative .dvc path, e.g. "datasets/v1.dvc"
 }
 
 export interface TrainingRun {

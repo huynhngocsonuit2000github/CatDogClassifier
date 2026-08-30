@@ -21,32 +21,6 @@ export class AppStore {
   readonly production = computed(() => this.models().find((m) => m.stage === 'Production'));
   readonly totalImages = computed(() => this.datasets().reduce((sum, d) => sum + d.images, 0));
 
-  uploadDataset(note: string, imageCount: number): void {
-    const version = `v${this.datasets().length + 1}`;
-    const name = note.trim() || `Dataset ${version}`;
-    const cats = Math.round(imageCount / 2);
-    const dogs = imageCount - cats;
-
-    const record: DatasetVersion = {
-      version,
-      name,
-      images: imageCount,
-      cats,
-      dogs,
-      sizeMb: Math.round(imageCount * 0.1),
-      status: 'validating',
-      createdAt: new Date(),
-    };
-
-    this.datasets.update((list) => [...list, record]);
-
-    setTimeout(() => {
-      this.datasets.update((list) =>
-        list.map((d) => (d.version === version ? { ...d, status: 'validated' as const } : d)),
-      );
-    }, 1800);
-  }
-
   startTraining(cfg: TrainingConfig): void {
     const n = this.runs().length + 1;
     const id = `run-${String(n).padStart(3, '0')}`;

@@ -13,12 +13,12 @@ function dt(date: string): Date {
 }
 
 export const SEED_DATASETS: DatasetVersion[] = [
-  { version: 'v1', name: 'Initial Kaggle subset', images: 4000, cats: 2000, dogs: 2000, sizeMb: 412, status: 'validated', createdAt: dt('2026-04-30') },
-  { version: 'v2', name: 'Added web-scraped images', images: 8000, cats: 4000, dogs: 4000, sizeMb: 830, status: 'validated', createdAt: dt('2026-05-24') },
-  { version: 'v3', name: 'De-duplicated + relabeled', images: 12500, cats: 6250, dogs: 6250, sizeMb: 1290, status: 'validated', createdAt: dt('2026-06-19') },
-  { version: 'v4', name: 'Augmentation pipeline v2', images: 20000, cats: 10000, dogs: 10000, sizeMb: 2140, status: 'validated', createdAt: dt('2026-07-14') },
-  { version: 'v5', name: 'Hard-negative mining', images: 34000, cats: 17000, dogs: 17000, sizeMb: 3560, status: 'validated', createdAt: dt('2026-08-07') },
-  { version: 'v6', name: 'Community contributions batch', images: 47500, cats: 23750, dogs: 23750, sizeMb: 4980, status: 'validating', createdAt: dt('2026-08-22') },
+  { version: 'v1', name: 'Initial Kaggle subset', images: 4000, cats: 2000, dogs: 2000, status: 'validated', createdAt: dt('2026-04-30') },
+  { version: 'v2', name: 'Added web-scraped images', images: 8000, cats: 4000, dogs: 4000, status: 'validated', createdAt: dt('2026-05-24') },
+  { version: 'v3', name: 'De-duplicated + relabeled', images: 12500, cats: 6250, dogs: 6250, status: 'validated', createdAt: dt('2026-06-19') },
+  { version: 'v4', name: 'Augmentation pipeline v2', images: 20000, cats: 10000, dogs: 10000, status: 'validated', createdAt: dt('2026-07-14') },
+  { version: 'v5', name: 'Hard-negative mining', images: 34000, cats: 17000, dogs: 17000, status: 'validated', createdAt: dt('2026-08-07') },
+  { version: 'v6', name: 'Community contributions batch', images: 47500, cats: 23750, dogs: 23750, status: 'validating', createdAt: dt('2026-08-22') },
 ];
 
 type RunSpec = [string, number, number, RunStatus, string];

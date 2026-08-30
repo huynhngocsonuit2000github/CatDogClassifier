@@ -11,41 +11,46 @@
           <th>Version</th>
           <th>Images</th>
           <th>Cat / Dog balance</th>
-          <th>Size</th>
           <th>Status</th>
           <th>Created</th>
         </tr>
       </thead>
       <tbody>
-        @for (d of store.datasets(); track d.version) {
-          <tr>
-            <td>
-              <div class="ds-name">{{ d.version }}</div>
-              <div class="ds-label">{{ d.name }}</div>
-            </td>
-            <td>{{ d.images.toLocaleString('en-US') }}</td>
-            <td>
-              <div class="row">
-                <div class="split-bar">
-                  <div class="split-bar-cat" [style.width.%]="catPercent(d)"></div>
-                  <div class="split-bar-dog" [style.width.%]="100 - catPercent(d)"></div>
+        @if (loading()) {
+          <tr><td colspan="5" class="empty">Loading datasets…</td></tr>
+        } @else if (datasets().length === 0) {
+          <tr><td colspan="5" class="empty">No datasets yet — upload one on the right.</td></tr>
+        } @else {
+          @for (d of datasets(); track d.version) {
+            <tr>
+              <td>
+                <div class="ds-name">{{ d.version }}</div>
+                <div class="ds-label">{{ d.name }}</div>
+              </td>
+              <td>{{ d.images.toLocaleString('en-US') }}</td>
+              <td>
+                <div class="row">
+                  <div class="split-bar">
+                    <div class="split-bar-cat" [style.width.%]="catPercent(d)"></div>
+                    <div class="split-bar-dog" [style.width.%]="100 - catPercent(d)"></div>
+                  </div>
+                  <span class="split-label">{{ catPercent(d) }}% cat · {{ 100 - catPercent(d) }}% dog</span>
                 </div>
-                <span class="split-label">{{ catPercent(d) }}% cat · {{ 100 - catPercent(d) }}% dog</span>
-              </div>
-            </td>
-            <td>{{ d.sizeMb }} MB</td>
-            <td>
-              <span
-                class="badge"
-                [class.success]="d.status === 'validated'"
-                [class.warning]="d.status === 'validating'"
-                [class.pulse]="d.status === 'validating'"
-              >
-                <span class="badge-dot"></span>{{ d.status }}
-              </span>
-            </td>
-            <td>{{ formatShort(d.createdAt) }}</td>
-          </tr>
+              </td>
+              <td>
+                <span
+                  class="badge"
+                  [class.success]="d.status === 'validated'"
+                  [class.warning]="d.status === 'validating'"
+                  [class.danger]="d.status === 'failed' || d.status === 'invalid'"
+                  [class.pulse]="d.status === 'validating'"
+                >
+                  <span class="badge-dot"></span>{{ d.status }}
+                </span>
+              </td>
+              <td>{{ formatShort(d.createdAt) }}</td>
+            </tr>
+          }
         }
       </tbody>
     </table>
@@ -54,15 +59,29 @@
   <aside class="card">
     <h3 class="card-title mt-0">Upload &amp; validate</h3>
     <p class="card-label" style="margin: -10px 0 16px">
-      Creates a new dataset version and runs schema + class-balance checks.
+      Uploads a .zip with <code>cats/</code> and <code>dogs/</code> folders, then runs
+      schema + image-integrity checks and versions it with DVC.
     </p>
 
     <div class="form-stack">
-      <div class="dropzone">
+      <div
+        class="dropzone"
+        [class.dragover]="dragging()"
+        (click)="fileInput.click()"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave()"
+        (drop)="onDrop($event)"
+      >
         <app-icon name="upload" [size]="22" />
-        <div>Drop a .zip of labelled images</div>
-        <div style="font-size: 12px">or click to browse</div>
+        @if (file()) {
+          <div class="dz-name">{{ file()!.name }}</div>
+          <div style="font-size: 12px">{{ formatBytes(file()!.size) }}</div>
+        } @else {
+          <div>Drop a .zip of labelled images</div>
+          <div style="font-size: 12px">or click to browse</div>
+        }
       </div>
+      <input #fileInput type="file" accept=".zip,application/zip" hidden (change)="onFileInput($event)" />
 
       <div class="field">
         <span class="field-label">Version note</span>
@@ -74,12 +93,13 @@
         />
       </div>
 
-      <div class="field">
-        <span class="field-label">Image count</span>
-        <input class="input" type="number" [value]="imageCount()" (input)="onCountInput($event)" />
-      </div>
+      @if (error()) {
+        <div class="form-error">{{ error() }}</div>
+      }
 
-      <button class="btn btn-primary" (click)="upload()">Upload &amp; validate</button>
+      <button class="btn btn-primary" (click)="upload()" [disabled]="!file()">
+        Upload &amp; validate
+      </button>
     </div>
   </aside>
 </div>
