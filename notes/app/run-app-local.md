@@ -85,3 +85,35 @@ Either use the Registry page in the UI, or the API:
 
 curl.exe -X POST http://127.0.0.1:8002/models/CatDogClassifier/v1/stage -H "Content-Type: application/json" -d "{\"stage\":\"Staging\"}"
 curl.exe -X POST http://127.0.0.1:8002/models/CatDogClassifier/v1/stage -H "Content-Type: application/json" -d "{\"stage\":\"Production\"}"
+
+# Run prediction service: http://127.0.0.1:8003/docs
+
+## First time only (needs MLflow up first: `docker compose up -d mlflow`, plus at least one Production model — see Registry above)
+
+cd "D:\me\TMA AI\CatDogClassifier\src\services\prediction"
+python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
+
+> This installs TensorFlow (a large download): slow the first time.
+
+## Run the service
+
+set MLFLOW_TRACKING_URI=http://localhost:5000
+.venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8003
+
+> Optional overrides (all have defaults — see `.env.example`):
+> `set REGISTER_MODEL_NAME=CatDogClassifier`, `set IMAGE_SIZE=160`, `set PREDICT_THRESHOLD=0.5`.
+
+## Smoke test
+
+> `/health` reports which model version is currently served:
+
+curl.exe http://127.0.0.1:8003/health
+
+> `/predict` takes an image file (e.g. one from a pulled dataset):
+
+curl.exe -X POST http://127.0.0.1:8003/predict -F "file=@path\to\cat.jpg"
+
+> The served model is resolved dynamically as `models:/CatDogClassifier/Production`.
+> Promote a different version in the Registry and `/predict` switches to it with
+> no restart and no code change.

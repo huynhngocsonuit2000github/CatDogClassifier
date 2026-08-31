@@ -14,15 +14,7 @@ export class RegistryPage implements OnInit {
     this.store.loadModels();
   }
 
-  protected canApprove(m: ModelVersion): boolean {
-    return m.stage === 'Pending';
-  }
-
-  protected canReject(m: ModelVersion): boolean {
-    return m.stage === 'Pending' || m.stage === 'Staging';
-  }
-
   protected canPromote(m: ModelVersion): boolean {
-    return m.stage === 'Staging';
+    return m.stage !== 'Production';
   }
 }

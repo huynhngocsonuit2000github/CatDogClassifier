@@ -13,6 +13,7 @@ export class PredictionPage {
   protected readonly store = inject(AppStore);
 
   protected readonly fileName = signal<string | null>(null);
+  protected readonly file = signal<File | null>(null);
   protected readonly previewUrl = signal<string | null>(null);
   protected readonly result = signal<Prediction | null>(null);
   protected readonly dragging = signal(false);
@@ -47,12 +48,13 @@ export class PredictionPage {
   }
 
   protected predict(): void {
-    const name = this.fileName();
-    if (!name) return;
-    this.result.set(this.store.predict(name));
+    const file = this.file();
+    if (!file) return;
+    this.store.predict(file).subscribe((r) => this.result.set(r));
   }
 
   private loadFile(file: File): void {
+    this.file.set(file);
     this.fileName.set(file.name);
     this.result.set(null);
     if (this.previewUrl()) {

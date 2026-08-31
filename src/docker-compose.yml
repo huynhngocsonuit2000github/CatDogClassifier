@@ -64,6 +64,22 @@ services:
       - "8002:8002"
     restart: on-failure
 
+  # Prediction service (Step 4). Serves the current Production model
+  # dynamically (models:/CatDogClassifier/Production) — reads the Registry
+  # directly, same as model-registry; no volumes. The TensorFlow image is
+  # large (~2.8 GB), so building it is optional for Step 4: run it locally
+  # with uvicorn instead (see notes/app/run-app-local.md), like Training.
+  prediction:
+    build: ./services/prediction
+    depends_on:
+      - mlflow
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      REGISTER_MODEL_NAME: CatDogClassifier
+    ports:
+      - "8003:8003"
+    restart: on-failure
+
 volumes:
   minio_data:
   data_repo:

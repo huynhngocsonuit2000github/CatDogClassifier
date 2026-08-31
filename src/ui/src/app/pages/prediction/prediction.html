@@ -8,6 +8,10 @@
   <span>Serving: <strong>{{ serving() }}</strong></span>
 </div>
 
+@if (store.predictionError()) {
+  <div class="form-error" style="margin-bottom: 12px">{{ store.predictionError() }}</div>
+}
+
 <div class="grid-2">
   <div class="card">
     <div class="form-stack">
@@ -32,7 +36,13 @@
         />
       }
 
-      <button class="btn btn-primary" [disabled]="!fileName()" (click)="predict()">Predict</button>
+      <button
+        class="btn btn-primary"
+        [disabled]="!fileName() || store.predicting()"
+        (click)="predict()"
+      >
+        {{ store.predicting() ? 'Predicting…' : 'Predict' }}
+      </button>
     </div>
   </div>
 

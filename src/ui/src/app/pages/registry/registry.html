@@ -1,6 +1,6 @@
 <div class="page-head">
   <h1 class="page-title">Registered models</h1>
-  <p class="page-sub">Approve candidates into staging, reject failures, promote the winner to production.</p>
+  <p class="page-sub">Promote the version you want to serve — it instantly replaces the current production model.</p>
 </div>
 
 <div class="row-between" style="margin-bottom: 12px">
@@ -44,20 +44,6 @@
       </div>
 
       <div class="model-actions">
-        <button
-          class="btn btn-outline btn-sm"
-          [disabled]="!canApprove(m)"
-          (click)="store.approve(m.name, m.version)"
-        >
-          Approve
-        </button>
-        <button
-          class="btn btn-sm btn-danger"
-          [disabled]="!canReject(m)"
-          (click)="store.reject(m.name, m.version)"
-        >
-          Reject
-        </button>
         <button
           class="btn btn-primary btn-sm"
           [disabled]="!canPromote(m)"

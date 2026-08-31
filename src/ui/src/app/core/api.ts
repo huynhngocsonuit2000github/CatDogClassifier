@@ -293,3 +293,43 @@ export class RegistryApi {
       .pipe(map((res) => (res.models ?? []).map(toModel)));
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Prediction service (Step 4)                                         */
+/* ------------------------------------------------------------------ */
+
+/** Base URL of the Prediction service (Step 4). Serves the Production model. */
+const PREDICTION_BASE_URL = 'http://127.0.0.1:8003';
+
+/** Wire shape returned by `POST /predict` (snake_case). */
+interface PredictDto {
+  prediction: string;
+  confidence: number;
+  model_name: string;
+  model_version: string;
+}
+
+/** Result of one prediction, mapped to camelCase for the store. */
+export interface PredictionResult {
+  result: 'cat' | 'dog';
+  confidence: number;
+  modelVersion: string; // "CatDogClassifier v3"
+}
+
+@Injectable({ providedIn: 'root' })
+export class PredictionApi {
+  private readonly http = inject(HttpClient);
+
+  /** `POST /predict` — upload an image, get a cat/dog result from the served model. */
+  predict(file: File): Observable<PredictionResult> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.post<PredictDto>(`${PREDICTION_BASE_URL}/predict`, form).pipe(
+      map((dto) => ({
+        result: dto.prediction === 'dog' ? ('dog' as const) : ('cat' as const),
+        confidence: dto.confidence,
+        modelVersion: `${dto.model_name} ${dto.model_version}`,
+      })),
+    );
+  }
+}

@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { EMPTY, Observable, catchError, map, of, tap } from 'rxjs';
 import {
   DatasetVersion,
   ModelStage,
@@ -14,19 +15,23 @@ import {
   SEED_PREDICTIONS,
   SEED_RUNS,
 } from './seed';
-import { DataApi, RegistryApi, TrainingApi } from './api';
+import { DataApi, PredictionApi, RegistryApi, TrainingApi } from './api';
 import { USE_MOCK } from './env';
+
+/** localStorage key for prediction history — survives page reloads. */
+const PREDICTIONS_KEY = 'catdog.predictions';
 
 @Injectable({ providedIn: 'root' })
 export class AppStore {
   private readonly dataApi = inject(DataApi);
   private readonly trainingApi = inject(TrainingApi);
   private readonly registryApi = inject(RegistryApi);
+  private readonly predictionApi = inject(PredictionApi);
 
   readonly datasets = signal<DatasetVersion[]>(USE_MOCK ? SEED_DATASETS : []);
   readonly runs = signal<TrainingRun[]>(USE_MOCK ? SEED_RUNS : []);
   readonly models = signal<ModelVersion[]>(USE_MOCK ? SEED_MODELS : []);
-  readonly predictions = signal<Prediction[]>(SEED_PREDICTIONS);
+  readonly predictions = signal<Prediction[]>(USE_MOCK ? SEED_PREDICTIONS : []);
   readonly chart = signal(SEED_CHART);
 
   /** True while a `POST /train` is in flight. */
@@ -36,9 +41,14 @@ export class AppStore {
   readonly runsLoading = signal(false);
   /** Non-empty when the last models fetch/stage change failed (Registry page). */
   readonly modelsError = signal('');
+  /** Non-empty when the last `POST /predict` failed (Predict page). */
+  readonly predictionError = signal('');
+  /** True while a `POST /predict` is in flight. */
+  readonly predicting = signal(false);
 
   constructor() {
     if (!USE_MOCK) {
+      this.predictions.set(this.loadPredictions());
       this.loadDatasets();
       this.loadRuns();
       this.loadModels();
@@ -172,14 +182,7 @@ export class AppStore {
     }, 2400);
   }
 
-  approve(name: string, version: string): void {
-    this.setStage(name, version, 'Staging');
-  }
-
-  reject(name: string, version: string): void {
-    this.setStage(name, version, 'Rejected');
-  }
-
+  /** Promote a version to Production — it auto-archives the current winner. */
   promote(name: string, version: string): void {
     this.setStage(name, version, 'Production');
   }
@@ -234,7 +237,69 @@ export class AppStore {
     );
   }
 
-  predict(imageName: string): Prediction {
+  /** Prepend a prediction to the history and persist it across page reloads. */
+  private recordPrediction(prediction: Prediction): void {
+    this.predictions.update((list) => [prediction, ...list]);
+    this.persistPredictions();
+  }
+
+  private loadPredictions(): Prediction[] {
+    try {
+      const raw = localStorage.getItem(PREDICTIONS_KEY);
+      if (!raw) return [];
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((p) => ({ ...p, createdAt: new Date(p.createdAt) }));
+    } catch {
+      return [];
+    }
+  }
+
+  private persistPredictions(): void {
+    try {
+      localStorage.setItem(PREDICTIONS_KEY, JSON.stringify(this.predictions()));
+    } catch {
+      // Storage unavailable (e.g. private mode) — history just won't persist.
+    }
+  }
+
+  predict(file: File): Observable<Prediction> {
+    if (USE_MOCK) {
+      const prediction = this.predictMock(file.name);
+      this.recordPrediction(prediction);
+      return of(prediction);
+    }
+    this.predictionError.set('');
+    this.predicting.set(true);
+    const imageName = file.name;
+    return this.predictionApi.predict(file).pipe(
+      map(
+        ({ result, confidence, modelVersion }) =>
+          ({
+            id: `pred-${Date.now()}`,
+            imageName,
+            result,
+            confidence,
+            modelVersion,
+            createdAt: new Date(),
+          }) satisfies Prediction,
+      ),
+      tap({
+        next: (prediction) => {
+          this.predicting.set(false);
+          this.recordPrediction(prediction);
+        },
+        error: () => this.predicting.set(false),
+      }),
+      catchError((err) => {
+        this.predictionError.set(this.detailOf(err));
+        return EMPTY;
+      }),
+    );
+  }
+
+  /** Local (mock) prediction; hashes the filename — mirrors the real cat/dog split. */
+  private predictMock(imageName: string): Prediction {
     const prod = this.production();
     const modelVersion = prod ? `${prod.name} ${prod.version}` : 'CatDogClassifier v3';
 
@@ -245,7 +310,7 @@ export class AppStore {
     const result = h % 2 === 0 ? 'cat' : 'dog';
     const confidence = (88 + (h % 11)) / 100;
 
-    const prediction: Prediction = {
+    return {
       id: `pred-${Date.now()}`,
       imageName,
       result,
@@ -253,9 +318,6 @@ export class AppStore {
       modelVersion,
       createdAt: new Date(),
     };
-
-    this.predictions.update((list) => [prediction, ...list]);
-    return prediction;
   }
 
   /** Extract FastAPI's `{detail: ...}` or fall back to a generic message. */

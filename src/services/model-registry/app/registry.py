@@ -165,12 +165,12 @@ class Registry:
             self._client.transition_model_version_stage(name, version_int, NATIVE_STAGING)
 
         elif stage == "Production":
-            if current != "Staging":
-                raise RegistryError(f"{name} v{native_version} is {current}, not Staging — cannot promote to Production")
-            # archive_existing_versions demotes the current Production → Archived.
-            self._client.transition_model_version_stage(
-                name, version_int, NATIVE_PRODUCTION, archive_existing_versions=True
-            )
+            # Simple model: promote the winner straight to Production, auto-archiving
+            # whoever currently holds it. Re-promoting the live version is a no-op.
+            if current != "Production":
+                self._client.transition_model_version_stage(
+                    name, version_int, NATIVE_PRODUCTION, archive_existing_versions=True
+                )
 
         elif stage == "Rejected":
             if current not in ("Pending", "Staging"):

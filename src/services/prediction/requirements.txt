@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+mlflow==2.22.4
+tensorflow==2.21.0
