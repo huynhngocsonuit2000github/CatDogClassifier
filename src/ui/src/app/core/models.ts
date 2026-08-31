@@ -15,6 +15,14 @@ export interface DatasetVersion {
   dvcFile?: string; // repo-relative .dvc path, e.g. "datasets/v1.dvc"
 }
 
+export interface TrainingConfig {
+  arch: Arch;
+  datasetVersion: string;
+  epochs: number;
+  batchSize: number;
+  learningRate: number;
+}
+
 export interface TrainingRun {
   id: string; // "run-020"
   name: string;

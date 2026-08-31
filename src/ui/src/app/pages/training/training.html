@@ -19,7 +19,10 @@
       <div class="field">
         <span class="field-label">Dataset version</span>
         <select class="select" (change)="onDatasetInput($event)">
-          @for (d of store.datasets(); track d.version) {
+          @if (trainableDatasets().length === 0) {
+            <option value="" disabled selected>No validated datasets</option>
+          }
+          @for (d of trainableDatasets(); track d.version) {
             <option [value]="d.version" [selected]="d.version === datasetVersion()">{{ d.version }} · {{ d.images.toLocaleString('en-US') }} images</option>
           }
         </select>
@@ -41,15 +44,28 @@
         <input class="input" [value]="learningRate()" (input)="onLr($event)" />
       </div>
 
-      <button class="btn btn-primary" (click)="startTraining()">Start training</button>
+      <button
+        class="btn btn-primary"
+        (click)="startTraining()"
+        [disabled]="store.starting() || trainableDatasets().length === 0"
+      >
+        {{ store.starting() ? 'Starting…' : 'Start training' }}
+      </button>
     </div>
   </aside>
 
   <div class="card">
     <div class="row-between" style="margin-bottom: 12px">
-      <h3 class="card-title mt-0">All runs</h3>
+      <div class="row" style="gap: 10px">
+        <h3 class="card-title mt-0" style="margin-bottom: 0">All runs</h3>
+        <button class="btn btn-outline btn-sm" (click)="store.loadRuns()" [disabled]="store.runsLoading()">Refresh</button>
+      </div>
       <span class="text-muted">{{ selected().length }}/3 selected to compare</span>
     </div>
+
+    @if (store.runsError()) {
+      <div class="form-error" style="margin-bottom: 12px">{{ store.runsError() }}</div>
+    }
 
     @if (selectedRuns().length > 0) {
       <div class="card" style="margin-bottom: 14px; background: var(--primary-soft)">

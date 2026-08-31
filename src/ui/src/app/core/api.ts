@@ -2,7 +2,14 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
-import { DatasetStatus, DatasetVersion } from './models';
+import {
+  Arch,
+  DatasetStatus,
+  DatasetVersion,
+  RunStatus,
+  TrainingConfig,
+  TrainingRun,
+} from './models';
 
 /**
  * Base URL of the Data Management service (Step 1). The backend sets
@@ -76,5 +83,141 @@ export class DataApi {
     return this.http
       .post<DatasetDto>(`${BASE_URL}/datasets`, form)
       .pipe(map(toDataset));
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Training service (Step 2)                                           */
+/* ------------------------------------------------------------------ */
+
+/** Base URL of the Training service (Step 2). See TrainingApi docs. */
+const TRAINING_BASE_URL = 'http://127.0.0.1:8001';
+
+/** Wire shape of one run from `GET /runs` (snake_case, MLflow Enum names). */
+interface RunDto {
+  run_id: string;
+  status: string;
+  run_name: string | null;
+  start_time: string | null;
+  params: Record<string, string>;
+  metrics: Record<string, number>;
+}
+
+/** Wire shape returned by `POST /train` (HTTP 202). */
+interface TrainStartDto {
+  job_id: string;
+  status: string;
+  dataset_version: string;
+  epochs: number;
+  batch_size: number;
+  learning_rate: number;
+  image_size: number;
+}
+
+/** Wire shape of one entry from `GET /jobs/{job_id}`. */
+interface JobDto {
+  job_id: string;
+  status: string;
+  dataset_version: string;
+  run_id: string | null;
+  metrics: Record<string, number> | null;
+  error: string | null;
+  created_at: string;
+}
+
+export type TrainingJobStatus =
+  | 'starting'
+  | 'pulling'
+  | 'training'
+  | 'finished'
+  | 'failed';
+
+export interface TrainingJob {
+  jobId: string;
+  status: TrainingJobStatus;
+  runId: string | null;
+  error: string | null;
+  metrics: Record<string, number> | null;
+}
+
+const ARCHES: Arch[] = ['mobilenetv2', 'resnet50', 'efficientnetb0'];
+
+function toArch(value: unknown): Arch {
+  return ARCHES.includes(value as Arch) ? (value as Arch) : 'mobilenetv2';
+}
+
+function toNumber(value: unknown, fallback: number): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function normalizeRunStatus(status: string): RunStatus {
+  switch (status) {
+    case 'FINISHED':
+      return 'finished';
+    case 'RUNNING':
+      return 'running';
+    case 'FAILED':
+    default:
+      return 'failed';
+  }
+}
+
+function toRun(dto: RunDto): TrainingRun {
+  // `params`/`metrics` are index signatures (Record<…>), so read them with
+  // bracket access (dot access fails TS4111).
+  const params = dto.params ?? {};
+  const metrics = dto.metrics ?? {};
+  const accuracy = metrics['accuracy'];
+  const loss = metrics['loss'];
+  return {
+    id: dto.run_id,
+    name: dto.run_name ?? dto.run_id.slice(0, 8),
+    arch: toArch(params['model_name']),
+    datasetVersion: params['dataset_version'] ?? '',
+    epochs: toNumber(params['epochs'], 0),
+    batchSize: toNumber(params['batch_size'], 0),
+    learningRate: toNumber(params['learning_rate'], 0),
+    accuracy: accuracy != null ? Math.round(accuracy * 1000) / 10 : null,
+    loss: loss != null ? Math.round(loss * 1000) / 1000 : null,
+    status: normalizeRunStatus(dto.status),
+    createdAt: dto.start_time ? new Date(dto.start_time) : new Date(),
+  };
+}
+
+@Injectable({ providedIn: 'root' })
+export class TrainingApi {
+  private readonly http = inject(HttpClient);
+
+  /** `GET /runs` — every run recorded in MLflow, newest first. */
+  listRuns(): Observable<TrainingRun[]> {
+    return this.http
+      .get<{ runs: RunDto[] }>(`${TRAINING_BASE_URL}/runs`)
+      .pipe(map((res) => (res.runs ?? []).map(toRun)));
+  }
+
+  /** `POST /train` — start a background training job, returns its `job_id`. */
+  startTraining(cfg: TrainingConfig): Observable<{ jobId: string }> {
+    return this.http
+      .post<TrainStartDto>(`${TRAINING_BASE_URL}/train`, {
+        dataset_version: cfg.datasetVersion,
+        epochs: cfg.epochs,
+        batch_size: cfg.batchSize,
+        learning_rate: cfg.learningRate,
+      })
+      .pipe(map((dto) => ({ jobId: dto.job_id })));
+  }
+
+  /** `GET /jobs/{job_id}` — status of one background training job. */
+  getJob(jobId: string): Observable<TrainingJob> {
+    return this.http.get<JobDto>(`${TRAINING_BASE_URL}/jobs/${jobId}`).pipe(
+      map((dto) => ({
+        jobId: dto.job_id,
+        status: dto.status as TrainingJobStatus,
+        runId: dto.run_id ?? null,
+        error: dto.error ?? null,
+        metrics: dto.metrics ?? null,
+      })),
+    );
   }
 }

@@ -1,4 +1,5 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import type { OnInit } from '@angular/core';
 import { AppStore } from '../../core/store';
 import { Arch } from '../../core/models';
 import { formatShort } from '../../core/format';
@@ -7,20 +8,40 @@ import { formatShort } from '../../core/format';
   selector: 'app-training',
   templateUrl: './training.html',
 })
-export class TrainingPage {
+export class TrainingPage implements OnInit {
   protected readonly store = inject(AppStore);
 
   protected readonly arches: Arch[] = ['mobilenetv2', 'resnet50', 'efficientnetb0'];
 
-  protected readonly arch = signal<Arch>('resnet50');
-  protected readonly datasetVersion = signal<string>(
-    this.store.datasets()[this.store.datasets().length - 1].version,
-  );
+  protected readonly arch = signal<Arch>('mobilenetv2');
+  protected readonly datasetVersion = signal('');
   protected readonly epochs = signal(15);
   protected readonly batchSize = signal(32);
   protected readonly learningRate = signal('0.0005');
 
   protected readonly selected = signal<string[]>([]);
+
+  /** Only validated versions have data pulled into the shared repo. */
+  protected readonly trainableDatasets = computed(() =>
+    this.store.datasets().filter((d) => d.status === 'validated'),
+  );
+
+  constructor() {
+    // Keep the picker on a real, trainable version once the catalogue loads.
+    effect(() => {
+      const options = this.trainableDatasets();
+      const current = this.datasetVersion();
+      if (options.length === 0) return;
+      if (!options.some((d) => d.version === current)) {
+        this.datasetVersion.set(options[options.length - 1].version);
+      }
+    });
+  }
+
+  ngOnInit(): void {
+    this.store.loadDatasets();
+    this.store.loadRuns();
+  }
 
   protected readonly selectedRuns = computed(() => {
     const ids = this.selected();
