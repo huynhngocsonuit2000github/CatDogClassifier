@@ -58,6 +58,10 @@ class Settings:
     default_learning_rate: float
     default_image_size: int
 
+    # Registered-model name in the MLflow Model Registry (Step 3). Every trained
+    # run is auto-registered as a new version of this model.
+    model_registry_name: str
+
     @property
     def datasets_dir(self) -> Path:
         return self.data_repo / "datasets"
@@ -86,4 +90,5 @@ def get_settings() -> Settings:
         default_batch_size=_get_int("TRAIN_BATCH_SIZE", 8),
         default_learning_rate=_get_float("TRAIN_LEARNING_RATE", 1e-3),
         default_image_size=_get_int("TRAIN_IMAGE_SIZE", 160),
+        model_registry_name=_get("REGISTER_MODEL_NAME", "CatDogClassifier"),
     )

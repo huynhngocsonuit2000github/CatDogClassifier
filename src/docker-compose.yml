@@ -51,6 +51,19 @@ services:
       - mlflow_store:/mlflow
     restart: on-failure
 
+  # Model Registry service (Step 3). Wraps the MLflow Model Registry so the
+  # platform can version + stage CatDogClassifier models (Pending → Staging →
+  # Production → Archived). Stateless — no volumes, just an MLflow client.
+  model-registry:
+    build: ./services/model-registry
+    depends_on:
+      - mlflow
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    ports:
+      - "8002:8002"
+    restart: on-failure
+
 volumes:
   minio_data:
   data_repo:

@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import {
   DatasetVersion,
+  ModelStage,
   ModelVersion,
   Prediction,
   TrainingConfig,
@@ -13,17 +14,18 @@ import {
   SEED_PREDICTIONS,
   SEED_RUNS,
 } from './seed';
-import { DataApi, TrainingApi } from './api';
+import { DataApi, RegistryApi, TrainingApi } from './api';
 import { USE_MOCK } from './env';
 
 @Injectable({ providedIn: 'root' })
 export class AppStore {
   private readonly dataApi = inject(DataApi);
   private readonly trainingApi = inject(TrainingApi);
+  private readonly registryApi = inject(RegistryApi);
 
   readonly datasets = signal<DatasetVersion[]>(USE_MOCK ? SEED_DATASETS : []);
   readonly runs = signal<TrainingRun[]>(USE_MOCK ? SEED_RUNS : []);
-  readonly models = signal<ModelVersion[]>(SEED_MODELS);
+  readonly models = signal<ModelVersion[]>(USE_MOCK ? SEED_MODELS : []);
   readonly predictions = signal<Prediction[]>(SEED_PREDICTIONS);
   readonly chart = signal(SEED_CHART);
 
@@ -32,11 +34,14 @@ export class AppStore {
   /** Non-empty when the last runs fetch/launch failed (shown on the page). */
   readonly runsError = signal('');
   readonly runsLoading = signal(false);
+  /** Non-empty when the last models fetch/stage change failed (Registry page). */
+  readonly modelsError = signal('');
 
   constructor() {
     if (!USE_MOCK) {
       this.loadDatasets();
       this.loadRuns();
+      this.loadModels();
     }
   }
 
@@ -168,23 +173,62 @@ export class AppStore {
   }
 
   approve(name: string, version: string): void {
-    this.updateStage(name, version, 'Staging');
+    this.setStage(name, version, 'Staging');
   }
 
   reject(name: string, version: string): void {
-    this.updateStage(name, version, 'Rejected');
+    this.setStage(name, version, 'Rejected');
   }
 
   promote(name: string, version: string): void {
-    this.models.update((list) =>
-      list.map((m) =>
-        m.stage === 'Production' ? { ...m, stage: 'Archived' as const } : m,
-      ),
-    );
-    this.updateStage(name, version, 'Production');
+    this.setStage(name, version, 'Production');
   }
 
-  private updateStage(name: string, version: string, stage: ModelVersion['stage']): void {
+  /** Load registered models from the Registry service (Step 3). */
+  loadModels(): void {
+    if (USE_MOCK) {
+      this.models.set(SEED_MODELS);
+      return;
+    }
+    this.modelsError.set('');
+    this.registryApi.listModels().subscribe({
+      next: (list) => {
+        this.models.set(list);
+        this.modelsError.set('');
+      },
+      error: (err) => this.modelsError.set(this.detailOf(err)),
+    });
+  }
+
+  /** Move a version via the Registry API (or the local mock, offline). */
+  private setStage(name: string, version: string, stage: ModelStage): void {
+    if (USE_MOCK) {
+      this.setStageMock(name, version, stage);
+      return;
+    }
+    this.modelsError.set('');
+    this.registryApi.setStage(name, version, stage).subscribe({
+      next: (list) => {
+        this.models.set(list);
+        this.modelsError.set('');
+      },
+      error: (err) => this.modelsError.set(this.detailOf(err)),
+    });
+  }
+
+  /** Local (mock) stage transition; mirrors the Registry service's rules. */
+  private setStageMock(name: string, version: string, stage: ModelStage): void {
+    if (stage === 'Production') {
+      this.models.update((list) =>
+        list.map((m) =>
+          m.stage === 'Production' ? { ...m, stage: 'Archived' as const } : m,
+        ),
+      );
+    }
+    this.updateStage(name, version, stage);
+  }
+
+  private updateStage(name: string, version: string, stage: ModelStage): void {
     this.models.update((list) =>
       list.map((m) => (m.name === name && m.version === version ? { ...m, stage } : m)),
     );

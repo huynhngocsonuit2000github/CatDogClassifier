@@ -3,6 +3,15 @@
   <p class="page-sub">Approve candidates into staging, reject failures, promote the winner to production.</p>
 </div>
 
+<div class="row-between" style="margin-bottom: 12px">
+  <span></span>
+  <button class="btn btn-outline btn-sm" (click)="store.loadModels()">Refresh</button>
+</div>
+
+@if (store.modelsError()) {
+  <div class="form-error" style="margin-bottom: 12px">{{ store.modelsError() }}</div>
+}
+
 <div class="model-grid">
   @for (m of store.models(); track m.name + '-' + m.version) {
     <article class="model-card">

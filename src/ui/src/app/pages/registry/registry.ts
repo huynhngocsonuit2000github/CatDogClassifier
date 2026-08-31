@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import type { OnInit } from '@angular/core';
 import { AppStore } from '../../core/store';
 import { ModelVersion } from '../../core/models';
 
@@ -6,8 +7,12 @@ import { ModelVersion } from '../../core/models';
   selector: 'app-registry',
   templateUrl: './registry.html',
 })
-export class RegistryPage {
+export class RegistryPage implements OnInit {
   protected readonly store = inject(AppStore);
+
+  ngOnInit(): void {
+    this.store.loadModels();
+  }
 
   protected canApprove(m: ModelVersion): boolean {
     return m.stage === 'Pending';

@@ -6,6 +6,8 @@ import {
   Arch,
   DatasetStatus,
   DatasetVersion,
+  ModelStage,
+  ModelVersion,
   RunStatus,
   TrainingConfig,
   TrainingRun,
@@ -219,5 +221,75 @@ export class TrainingApi {
         metrics: dto.metrics ?? null,
       })),
     );
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Model Registry service (Step 3)                                     */
+/* ------------------------------------------------------------------ */
+
+/** Base URL of the Model Registry service (Step 3). See RegistryApi docs. */
+const REGISTRY_BASE_URL = 'http://127.0.0.1:8002';
+
+/** Wire shape of one model version from `GET /models` (snake_case). */
+interface ModelDto {
+  name: string;
+  version: string;
+  stage: string;
+  run_id: string;
+  dataset_version: string;
+  size_mb: number;
+  accuracy: number;
+  loss: number;
+}
+
+const MODEL_STAGES: ModelStage[] = ['Pending', 'Staging', 'Production', 'Archived', 'Rejected'];
+
+function normalizeModelStage(stage: string): ModelStage {
+  return MODEL_STAGES.includes(stage as ModelStage) ? (stage as ModelStage) : 'Pending';
+}
+
+function toModel(dto: ModelDto): ModelVersion {
+  return {
+    name: dto.name,
+    version: dto.version,
+    stage: normalizeModelStage(dto.stage),
+    runId: dto.run_id,
+    datasetVersion: dto.dataset_version,
+    sizeMb: dto.size_mb,
+    accuracy: dto.accuracy,
+    loss: dto.loss,
+  };
+}
+
+@Injectable({ providedIn: 'root' })
+export class RegistryApi {
+  private readonly http = inject(HttpClient);
+
+  /** `GET /models` — every registered version, enriched from its source run. */
+  listModels(): Observable<ModelVersion[]> {
+    return this.http
+      .get<{ models: ModelDto[] }>(`${REGISTRY_BASE_URL}/models`)
+      .pipe(map((res) => (res.models ?? []).map(toModel)));
+  }
+
+  /** `POST /models/{name}/{version}/stage` — move a version's stage. */
+  setStage(name: string, version: string, stage: ModelStage): Observable<ModelVersion[]> {
+    return this.http
+      .post<{ models: ModelDto[] }>(
+        `${REGISTRY_BASE_URL}/models/${encodeURIComponent(name)}/${encodeURIComponent(version)}/stage`,
+        { stage },
+      )
+      .pipe(map((res) => (res.models ?? []).map(toModel)));
+  }
+
+  /** `POST /models/{name}/register` — backfill a finished run as a new version. */
+  register(name: string, runId: string): Observable<ModelVersion[]> {
+    return this.http
+      .post<{ models: ModelDto[] }>(
+        `${REGISTRY_BASE_URL}/models/${encodeURIComponent(name)}/register`,
+        { run_id: runId },
+      )
+      .pipe(map((res) => (res.models ?? []).map(toModel)));
   }
 }

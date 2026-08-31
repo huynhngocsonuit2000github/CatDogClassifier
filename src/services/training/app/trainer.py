@@ -128,6 +128,9 @@ def train(settings: Settings, params: dict) -> dict:
         mlflow.log_metrics(metrics)
 
         mlflow.tensorflow.log_model(model, "model")
+        mlflow.register_model(
+            f"runs:/{run.info.run_id}/model", settings.model_registry_name
+        )
         mlflow.log_dict(
             {"class_names": class_names, "threshold": 0.5, "note": "sigmoid >= 0.5 -> dogs"},
             "metadata.json",
