@@ -8,18 +8,21 @@ import {
   DatasetVersion,
   ModelStage,
   ModelVersion,
+  Prediction,
   RunStatus,
   TrainingConfig,
   TrainingRun,
 } from './models';
+import { environment } from '../../environments/environment';
 
 /**
  * Base URL of the Data Management service (Step 1). The backend sets
  * `Access-Control-Allow-Origin: *`, so the browser can call it directly
- * without a dev-server proxy. Point this at the host/port where uvicorn
- * (local) or the `data-management` container (docker) is exposed.
+ * without a dev-server proxy. The URL comes from the build environment:
+ * local dev targets 127.0.0.1:8000; the docker build targets 127.0.0.1:8100
+ * (see src/environments/ and src/docker-compose.yml).
  */
-const BASE_URL = 'http://127.0.0.1:8000';
+const BASE_URL = environment.dataManagementUrl;
 
 /** Wire shape returned by the FastAPI backend (snake_case). */
 interface DatasetDto {
@@ -93,7 +96,7 @@ export class DataApi {
 /* ------------------------------------------------------------------ */
 
 /** Base URL of the Training service (Step 2). See TrainingApi docs. */
-const TRAINING_BASE_URL = 'http://127.0.0.1:8001';
+const TRAINING_BASE_URL = environment.trainingUrl;
 
 /** Wire shape of one run from `GET /runs` (snake_case, MLflow Enum names). */
 interface RunDto {
@@ -229,7 +232,7 @@ export class TrainingApi {
 /* ------------------------------------------------------------------ */
 
 /** Base URL of the Model Registry service (Step 3). See RegistryApi docs. */
-const REGISTRY_BASE_URL = 'http://127.0.0.1:8002';
+const REGISTRY_BASE_URL = environment.registryUrl;
 
 /** Wire shape of one model version from `GET /models` (snake_case). */
 interface ModelDto {
@@ -299,37 +302,52 @@ export class RegistryApi {
 /* ------------------------------------------------------------------ */
 
 /** Base URL of the Prediction service (Step 4). Serves the Production model. */
-const PREDICTION_BASE_URL = 'http://127.0.0.1:8003';
+const PREDICTION_BASE_URL = environment.predictionUrl;
 
-/** Wire shape returned by `POST /predict` (snake_case). */
-interface PredictDto {
+/** Wire shape of one prediction record (snake_case) — `POST /predict` and `GET /predictions`. */
+interface PredictionDto {
+  id: number;
+  image_name: string;
   prediction: string;
   confidence: number;
   model_name: string;
   model_version: string;
+  created_at: string;
 }
 
-/** Result of one prediction, mapped to camelCase for the store. */
-export interface PredictionResult {
-  result: 'cat' | 'dog';
-  confidence: number;
-  modelVersion: string; // "CatDogClassifier v3"
+function toPrediction(dto: PredictionDto): Prediction {
+  return {
+    id: String(dto.id),
+    imageName: dto.image_name,
+    result: dto.prediction === 'dog' ? ('dog' as const) : ('cat' as const),
+    confidence: dto.confidence,
+    modelVersion: `${dto.model_name} ${dto.model_version}`,
+    createdAt: new Date(dto.created_at),
+  };
 }
 
 @Injectable({ providedIn: 'root' })
 export class PredictionApi {
   private readonly http = inject(HttpClient);
 
-  /** `POST /predict` — upload an image, get a cat/dog result from the served model. */
-  predict(file: File): Observable<PredictionResult> {
+  /** `POST /predict` — upload an image; returns the stored Prediction (with DB id/createdAt). */
+  predict(file: File): Observable<Prediction> {
     const form = new FormData();
     form.append('file', file);
-    return this.http.post<PredictDto>(`${PREDICTION_BASE_URL}/predict`, form).pipe(
-      map((dto) => ({
-        result: dto.prediction === 'dog' ? ('dog' as const) : ('cat' as const),
-        confidence: dto.confidence,
-        modelVersion: `${dto.model_name} ${dto.model_version}`,
-      })),
-    );
+    return this.http
+      .post<PredictionDto>(`${PREDICTION_BASE_URL}/predict`, form)
+      .pipe(map(toPrediction));
+  }
+
+  /** `GET /predictions` — prediction history, newest first. */
+  listPredictions(): Observable<Prediction[]> {
+    return this.http
+      .get<{ predictions: PredictionDto[] }>(`${PREDICTION_BASE_URL}/predictions`)
+      .pipe(map((res) => (res.predictions ?? []).map(toPrediction)));
+  }
+
+  /** `DELETE /predictions` — clear the history. */
+  clearHistory(): Observable<void> {
+    return this.http.delete(`${PREDICTION_BASE_URL}/predictions`).pipe(map(() => undefined));
   }
 }

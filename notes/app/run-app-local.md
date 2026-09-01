@@ -102,7 +102,7 @@ set MLFLOW_TRACKING_URI=http://localhost:5000
 .venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8003
 
 > Optional overrides (all have defaults — see `.env.example`):
-> `set REGISTER_MODEL_NAME=CatDogClassifier`, `set IMAGE_SIZE=160`, `set PREDICT_THRESHOLD=0.5`.
+> `set REGISTER_MODEL_NAME=CatDogClassifier`, `set IMAGE_SIZE=160`, `set PREDICT_THRESHOLD=0.5`, `set PREDICTIONS_DB_PATH=./data/predictions.db`.
 
 ## Smoke test
 
@@ -117,3 +117,13 @@ curl.exe -X POST http://127.0.0.1:8003/predict -F "file=@path\to\cat.jpg"
 > The served model is resolved dynamically as `models:/CatDogClassifier/Production`.
 > Promote a different version in the Registry and `/predict` switches to it with
 > no restart and no code change.
+
+## Prediction history
+
+> History is stored in SQLite (`data/predictions.db`), not the browser, so it
+> survives reloads and is cleaned with the rest of the data. `GET /predictions`
+> lists it; `DELETE /predictions` clears it (there's a "Clear history" button on
+> the Predict page).
+>
+> curl.exe http://127.0.0.1:8003/predictions
+> curl.exe -X DELETE http://127.0.0.1:8003/predictions

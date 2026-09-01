@@ -69,8 +69,19 @@
 </div>
 
 <div class="card" style="margin-top: 16px">
-  <p class="card-label">Recent predictions</p>
-  <h3 class="card-title">History</h3>
+  <div class="row-between">
+    <div>
+      <p class="card-label">Recent predictions</p>
+      <h3 class="card-title">History</h3>
+    </div>
+    <button
+      class="btn btn-outline btn-sm"
+      [disabled]="store.predictions().length === 0"
+      (click)="clearHistory()"
+    >
+      Clear history
+    </button>
+  </div>
   <div class="table-wrap">
     <table class="table">
       <thead>

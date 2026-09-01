@@ -53,6 +53,10 @@ export class PredictionPage {
     this.store.predict(file).subscribe((r) => this.result.set(r));
   }
 
+  protected clearHistory(): void {
+    this.store.clearHistory();
+  }
+
   private loadFile(file: File): void {
     this.file.set(file);
     this.fileName.set(file.name);

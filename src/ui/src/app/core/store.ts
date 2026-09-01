@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { EMPTY, Observable, catchError, map, of, tap } from 'rxjs';
+import { EMPTY, Observable, catchError, of, tap } from 'rxjs';
 import {
   DatasetVersion,
   ModelStage,
@@ -17,9 +17,6 @@ import {
 } from './seed';
 import { DataApi, PredictionApi, RegistryApi, TrainingApi } from './api';
 import { USE_MOCK } from './env';
-
-/** localStorage key for prediction history — survives page reloads. */
-const PREDICTIONS_KEY = 'catdog.predictions';
 
 @Injectable({ providedIn: 'root' })
 export class AppStore {
@@ -48,7 +45,7 @@ export class AppStore {
 
   constructor() {
     if (!USE_MOCK) {
-      this.predictions.set(this.loadPredictions());
+      this.loadPredictions();
       this.loadDatasets();
       this.loadRuns();
       this.loadModels();
@@ -237,30 +234,35 @@ export class AppStore {
     );
   }
 
-  /** Prepend a prediction to the history and persist it across page reloads. */
+  /** Prepend a prediction to the history (persisted server-side by the service). */
   private recordPrediction(prediction: Prediction): void {
     this.predictions.update((list) => [prediction, ...list]);
-    this.persistPredictions();
   }
 
-  private loadPredictions(): Prediction[] {
-    try {
-      const raw = localStorage.getItem(PREDICTIONS_KEY);
-      if (!raw) return [];
-      const parsed: unknown = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [];
-      return parsed.map((p) => ({ ...p, createdAt: new Date(p.createdAt) }));
-    } catch {
-      return [];
+  /** Load prediction history from the Prediction service DB (Step 4). */
+  loadPredictions(): void {
+    if (USE_MOCK) {
+      this.predictions.set(SEED_PREDICTIONS);
+      return;
     }
+    this.predictionApi.listPredictions().subscribe({
+      next: (list) => this.predictions.set(list),
+      error: () => {
+        // Keep whatever we have; the Predict page surfaces its own error.
+      },
+    });
   }
 
-  private persistPredictions(): void {
-    try {
-      localStorage.setItem(PREDICTIONS_KEY, JSON.stringify(this.predictions()));
-    } catch {
-      // Storage unavailable (e.g. private mode) — history just won't persist.
+  /** Clear prediction history — truncates the DB in non-mock, empties the list. */
+  clearHistory(): void {
+    if (USE_MOCK) {
+      this.predictions.set([]);
+      return;
     }
+    this.predictionApi.clearHistory().subscribe({
+      next: () => this.predictions.set([]),
+      error: (err) => this.predictionError.set(this.detailOf(err)),
+    });
   }
 
   predict(file: File): Observable<Prediction> {
@@ -271,19 +273,7 @@ export class AppStore {
     }
     this.predictionError.set('');
     this.predicting.set(true);
-    const imageName = file.name;
     return this.predictionApi.predict(file).pipe(
-      map(
-        ({ result, confidence, modelVersion }) =>
-          ({
-            id: `pred-${Date.now()}`,
-            imageName,
-            result,
-            confidence,
-            modelVersion,
-            createdAt: new Date(),
-          }) satisfies Prediction,
-      ),
       tap({
         next: (prediction) => {
           this.predicting.set(false);

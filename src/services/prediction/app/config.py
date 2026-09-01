@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 
 
 def _get(name: str, default: str = "") -> str:
@@ -51,6 +52,10 @@ class Settings:
     # Sigmoid decision boundary: probability >= threshold is "dog" (class 1).
     threshold: float
 
+    # SQLite file holding the prediction history (Step 4). Cleaned by deleting
+    # the file, or in-app via DELETE /predictions.
+    db_path: Path
+
 
 @lru_cache
 def get_settings() -> Settings:
@@ -59,4 +64,5 @@ def get_settings() -> Settings:
         model_name=_get("REGISTER_MODEL_NAME", "CatDogClassifier"),
         image_size=_get_int("IMAGE_SIZE", 160),
         threshold=_get_float("PREDICT_THRESHOLD", 0.5),
+        db_path=Path(_get("PREDICTIONS_DB_PATH", "./data/predictions.db")),
     )

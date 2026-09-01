@@ -1,4 +1,18 @@
-# MLOps platform — every service (API + UI) containerized.
+# MLOps platform — every service (API + UI) run from images published to the
+# Docker Hub registry `huynhngocsonuit2000docker`.
+#
+# Each in-house service below has `image:` (what to pull/run) and `build:` (its
+# Dockerfile context, used only to build/push — ignored during `up`).
+#
+# Build, then publish the images to the registry:
+#
+#   docker compose -f docker-compose-img.yml build
+#   docker login
+#   docker compose -f docker-compose-img.yml push
+#
+# Run everything from the published images (pulls any that aren't local):
+#
+#   docker compose -f docker-compose-img.yml up
 #
 # Host ports are offset +100 from the local-dev ports so the containers can run
 # alongside services started directly with uvicorn / ng serve:
@@ -18,12 +32,13 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "9000:9000"   # S3 API (used by the services)
-      - "9003:9001"   # web console (http://localhost:9003) — 9001 is taken by Penpot
+      - "9000:9000" # S3 API (used by the services)
+      - "9003:9001" # web console (http://localhost:9003) — 9001 is taken by Penpot
     volumes:
       - minio_data:/data
 
   data-management:
+    image: huynhngocsonuit2000docker/catdog-data-management:latest
     build: ./services/data-management
     depends_on:
       - minio
@@ -57,7 +72,7 @@ services:
       --artifacts-destination /mlflow/mlartifacts
       --serve-artifacts
     ports:
-      - "5000:5000"   # MLflow UI + tracking API (http://localhost:5000)
+      - "5000:5000" # MLflow UI + tracking API (http://localhost:5000)
     volumes:
       - mlflow_store:/mlflow
     restart: on-failure
@@ -67,6 +82,7 @@ services:
   # records the run to MLflow. TensorFlow image is large (~2.8 GB) — same
   # caveat as prediction.
   training:
+    image: huynhngocsonuit2000docker/catdog-training:latest
     build: ./services/training
     depends_on:
       - minio
@@ -88,6 +104,7 @@ services:
   # platform can version + stage CatDogClassifier models (Pending → Staging →
   # Production → Archived). Stateless — no volumes, just an MLflow client.
   model-registry:
+    image: huynhngocsonuit2000docker/catdog-model-registry:latest
     build: ./services/model-registry
     depends_on:
       - mlflow
@@ -103,6 +120,7 @@ services:
   # under a small named volume so it survives container restarts and is cleaned
   # the same way as the rest (`docker compose down -v`).
   prediction:
+    image: huynhngocsonuit2000docker/catdog-prediction:latest
     build: ./services/prediction
     depends_on:
       - mlflow
@@ -119,6 +137,7 @@ services:
   # Angular UI, built with the production configuration (targets 8100-8103)
   # and served statically by nginx.
   ui:
+    image: huynhngocsonuit2000docker/catdog-ui:latest
     build: ./ui
     depends_on:
       - data-management

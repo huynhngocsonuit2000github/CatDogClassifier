@@ -2,21 +2,25 @@
 
 Endpoints:
 
-- ``GET  /health``      — liveness + which model version is served.
-- ``POST /predict``     — multipart image upload → preprocess → sigmoid → cat/dog.
+- ``GET    /health``       — liveness + which model version is served.
+- ``POST   /predict``      — multipart image upload → preprocess → sigmoid → cat/dog.
+- ``GET    /predictions``  — prediction history (newest first).
+- ``DELETE /predictions``  — clear the history.
 
 The model is resolved dynamically (``models:/<name>/Production``); see
-``model_loader.py``.
+``model_loader.py``. Prediction history is stored in SQLite (``db.py``).
 """
 from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import Settings, get_settings
+from .db import clear_predictions, init_db, insert_prediction, list_predictions
 from .model_loader import ModelLoader, NoProductionModelError, preprocess
 
 logging.basicConfig(level=logging.INFO)
@@ -28,6 +32,7 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     app.state.settings = settings
     app.state.loader = ModelLoader(settings)
+    init_db(settings.db_path)
     logger.info("prediction ready — serving %s from MLflow at %s",
                 settings.model_name, settings.mlflow_tracking_uri)
     app.state.loader.warmup()
@@ -83,9 +88,48 @@ async def predict(file: UploadFile = File(...)) -> dict:
 
     probability = round(probability, 4)
     is_dog = probability >= settings.threshold
+    result = "dog" if is_dog else "cat"
+    record = insert_prediction(
+        settings.db_path,
+        image_name=file.filename or "unknown",
+        result=result,
+        confidence=round(probability if is_dog else 1 - probability, 4),
+        model_name=settings.model_name,
+        model_version=loader.served_version or "",
+        created_at=datetime.now(timezone.utc).isoformat(),
+    )
     return {
-        "prediction": "dog" if is_dog else "cat",
-        "confidence": round(probability if is_dog else 1 - probability, 4),
-        "model_name": settings.model_name,
-        "model_version": loader.served_version,
+        "id": record["id"],
+        "image_name": record["image_name"],
+        "prediction": record["result"],
+        "confidence": record["confidence"],
+        "model_name": record["model_name"],
+        "model_version": record["model_version"],
+        "created_at": record["created_at"],
     }
+
+
+@app.get("/predictions")
+def predictions() -> dict:
+    settings: Settings = app.state.settings
+    records = list_predictions(settings.db_path)
+    return {
+        "predictions": [
+            {
+                "id": r["id"],
+                "image_name": r["image_name"],
+                "prediction": r["result"],
+                "confidence": r["confidence"],
+                "model_name": r["model_name"],
+                "model_version": r["model_version"],
+                "created_at": r["created_at"],
+            }
+            for r in records
+        ]
+    }
+
+
+@app.delete("/predictions")
+def delete_predictions() -> dict:
+    settings: Settings = app.state.settings
+    return {"cleared": clear_predictions(settings.db_path)}
