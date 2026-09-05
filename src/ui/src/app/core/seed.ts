@@ -46,16 +46,34 @@ const RUN_SPECS: RunSpec[] = [
   ['v2', 91.4, 0.42, 'finished', '2026-07-02'],
 ];
 
-const ARCHES: Arch[] = ['efficientnetb0', 'resnet50', 'mobilenetv2'];
-
-function archOf(n: number): Arch {
-  return ARCHES[((n % 3) + 3) % 3];
+function seedParams(datasetVersion: string): Record<string, string> {
+  return {
+    model_name: 'mobilenetv2',
+    dataset_version: datasetVersion,
+    epochs: '15',
+    batch_size: '32',
+    learning_rate: '0.0005',
+    image_size: '160',
+    optimizer: 'adam',
+    loss_function: 'binary_crossentropy',
+    validation_split: '0.2',
+    weight_decay: '0.0001',
+    lr_scheduler: 'cosine',
+    early_stopping: 'true',
+    pretrained: 'true',
+    seed: '42',
+    augment_flip: 'true',
+    augment_rotation: 'true',
+    augment_color_jitter: 'true',
+    augment_crop: 'true',
+    train_samples: '8000',
+  };
 }
 
 export const SEED_RUNS: TrainingRun[] = RUN_SPECS.map((spec, i) => {
   const n = 20 - i;
   const [datasetVersion, accuracy, loss, status, date] = spec;
-  const arch = archOf(n);
+  const arch: Arch = 'mobilenetv2';
   return {
     id: `run-${String(n).padStart(3, '0')}`,
     name: `catdog-${arch}-${n}`,
@@ -68,6 +86,8 @@ export const SEED_RUNS: TrainingRun[] = RUN_SPECS.map((spec, i) => {
     loss,
     status,
     createdAt: dt(date),
+    params: seedParams(datasetVersion),
+    durationSeconds: 90 + ((i * 37) % 180),
   };
 });
 

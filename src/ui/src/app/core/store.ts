@@ -99,8 +99,8 @@ export class AppStore {
         this.starting.set(false);
         const pending: TrainingRun = {
           id: `job-${jobId}`,
-          name: `${cfg.datasetVersion}-${cfg.arch}`,
-          arch: cfg.arch,
+          name: `${cfg.datasetVersion}-mobilenetv2`,
+          arch: 'mobilenetv2',
           datasetVersion: cfg.datasetVersion,
           epochs: cfg.epochs,
           batchSize: cfg.batchSize,
@@ -109,6 +109,8 @@ export class AppStore {
           loss: null,
           status: 'running',
           createdAt: new Date(),
+          params: this.configParams(cfg),
+          durationSeconds: null,
         };
         this.runs.update((list) => [pending, ...list]);
         this.trackJob(jobId, pending.id);
@@ -154,8 +156,8 @@ export class AppStore {
 
     const run: TrainingRun = {
       id,
-      name: `catdog-${cfg.arch}-${n}`,
-      arch: cfg.arch,
+      name: `catdog-mobilenetv2-${n}`,
+      arch: 'mobilenetv2',
       datasetVersion: cfg.datasetVersion,
       epochs: cfg.epochs,
       batchSize: cfg.batchSize,
@@ -164,6 +166,8 @@ export class AppStore {
       loss: null,
       status: 'running',
       createdAt: new Date(),
+      params: this.configParams(cfg),
+      durationSeconds: null,
     };
 
     this.runs.update((list) => [run, ...list]);
@@ -177,6 +181,30 @@ export class AppStore {
         ),
       );
     }, 2400);
+  }
+
+  /** Flatten a training config into the MLflow-param shape used by the detail view. */
+  private configParams(cfg: TrainingConfig): Record<string, string> {
+    return {
+      model_name: 'mobilenetv2',
+      dataset_version: cfg.datasetVersion,
+      epochs: String(cfg.epochs),
+      batch_size: String(cfg.batchSize),
+      learning_rate: String(cfg.learningRate),
+      image_size: String(cfg.imageSize),
+      optimizer: cfg.optimizer,
+      loss_function: 'binary_crossentropy',
+      validation_split: String(cfg.validationSplit),
+      weight_decay: String(cfg.weightDecay),
+      lr_scheduler: cfg.lrScheduler,
+      early_stopping: String(cfg.earlyStopping),
+      pretrained: String(cfg.pretrained),
+      seed: String(cfg.seed),
+      augment_flip: String(cfg.flip),
+      augment_rotation: String(cfg.rotation),
+      augment_color_jitter: String(cfg.colorJitter),
+      augment_crop: String(cfg.randomCrop),
+    };
   }
 
   /** Promote a version to Production — it auto-archives the current winner. */

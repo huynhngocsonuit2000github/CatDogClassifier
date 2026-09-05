@@ -104,6 +104,7 @@ interface RunDto {
   status: string;
   run_name: string | null;
   start_time: string | null;
+  end_time: string | null;
   params: Record<string, string>;
   metrics: Record<string, number>;
 }
@@ -145,15 +146,22 @@ export interface TrainingJob {
   metrics: Record<string, number> | null;
 }
 
-const ARCHES: Arch[] = ['mobilenetv2', 'resnet50', 'efficientnetb0'];
-
-function toArch(value: unknown): Arch {
-  return ARCHES.includes(value as Arch) ? (value as Arch) : 'mobilenetv2';
+/** The backend only ever trains MobileNetV2 — pin the arch regardless of input. */
+function toArch(_value: unknown): Arch {
+  return 'mobilenetv2';
 }
 
 function toNumber(value: unknown, fallback: number): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function durationSeconds(start: string | null, end: string | null): number | null {
+  if (!start || !end) return null;
+  const s = new Date(start).getTime();
+  const e = new Date(end).getTime();
+  if (!Number.isFinite(s) || !Number.isFinite(e) || e < s) return null;
+  return Math.round((e - s) / 1000);
 }
 
 function normalizeRunStatus(status: string): RunStatus {
@@ -187,6 +195,8 @@ function toRun(dto: RunDto): TrainingRun {
     loss: loss != null ? Math.round(loss * 1000) / 1000 : null,
     status: normalizeRunStatus(dto.status),
     createdAt: dto.start_time ? new Date(dto.start_time) : new Date(),
+    params,
+    durationSeconds: durationSeconds(dto.start_time, dto.end_time),
   };
 }
 
@@ -209,6 +219,18 @@ export class TrainingApi {
         epochs: cfg.epochs,
         batch_size: cfg.batchSize,
         learning_rate: cfg.learningRate,
+        image_size: cfg.imageSize,
+        optimizer: cfg.optimizer,
+        validation_split: cfg.validationSplit,
+        weight_decay: cfg.weightDecay,
+        lr_scheduler: cfg.lrScheduler,
+        early_stopping: cfg.earlyStopping,
+        pretrained: cfg.pretrained,
+        seed: cfg.seed,
+        augment_flip: cfg.flip,
+        augment_rotation: cfg.rotation,
+        augment_color_jitter: cfg.colorJitter,
+        augment_crop: cfg.randomCrop,
       })
       .pipe(map((dto) => ({ jobId: dto.job_id })));
   }

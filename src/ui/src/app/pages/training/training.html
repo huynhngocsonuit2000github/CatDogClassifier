@@ -1,47 +1,218 @@
 <div class="page-head">
-  <h1 class="page-title">Training runs</h1>
-  <p class="page-sub">Launch new experiments and compare up to 3 runs.</p>
+  <h1 class="page-title">Training</h1>
+  <p class="page-sub">Configure an experiment, launch it, and compare up to 3 runs. Click a run for its full configuration.</p>
 </div>
 
 <div class="train-layout">
   <aside class="card">
     <h3 class="card-title mt-0">New run</h3>
     <div class="form-stack">
-      <div class="field">
-        <span class="field-label">Architecture</span>
-        <select class="select" (change)="onArchInput($event)">
-          @for (a of arches; track a) {
-            <option [value]="a" [selected]="a === arch()">{{ a }}</option>
-          }
-        </select>
-      </div>
+      <div class="field-group">
+        <span class="field-group-title">Model</span>
 
-      <div class="field">
-        <span class="field-label">Dataset version</span>
-        <select class="select" (change)="onDatasetInput($event)">
-          @if (trainableDatasets().length === 0) {
-            <option value="" disabled selected>No validated datasets</option>
-          }
-          @for (d of trainableDatasets(); track d.version) {
-            <option [value]="d.version" [selected]="d.version === datasetVersion()">{{ d.version }} · {{ d.images.toLocaleString('en-US') }} images</option>
-          }
-        </select>
-      </div>
-
-      <div class="form-grid">
         <div class="field">
-          <span class="field-label">Epochs</span>
-          <input class="input" type="number" [value]="epochs()" (input)="onEpochs($event)" />
+          <span class="field-label">
+            Architecture
+            <span class="info-tip" data-tip="Neural network architecture used for image classification.">
+              <app-icon name="info" [size]="13"></app-icon>
+            </span>
+          </span>
+          <input class="input" value="MobileNetV2" disabled />
         </div>
+
+        <label class="toggle-row">
+          <span class="field-label">
+            Pretrained model
+            <span class="info-tip" data-tip="Start from a model pretrained on ImageNet instead of training from scratch.">
+              <app-icon name="info" [size]="13"></app-icon>
+            </span>
+          </span>
+          <input type="checkbox" [checked]="pretrained()" (change)="onToggle('pretrained', $event)" />
+        </label>
+
         <div class="field">
-          <span class="field-label">Batch size</span>
-          <input class="input" type="number" [value]="batchSize()" (input)="onBatch($event)" />
+          <span class="field-label">
+            Image size
+            <span class="info-tip" data-tip="Image resolution used as input to the model.">
+              <app-icon name="info" [size]="13"></app-icon>
+            </span>
+          </span>
+          <input class="input" type="number" min="32" max="512" [value]="imageSize()" (input)="onImageSize($event)" />
         </div>
       </div>
 
-      <div class="field">
-        <span class="field-label">Learning rate</span>
-        <input class="input" [value]="learningRate()" (input)="onLr($event)" />
+      <div class="field-group">
+        <span class="field-group-title">Training</span>
+
+        <div class="field">
+          <span class="field-label">Dataset version</span>
+          <select class="select" (change)="onDatasetInput($event)">
+            @if (trainableDatasets().length === 0) {
+              <option value="" disabled selected>No validated datasets</option>
+            }
+            @for (d of trainableDatasets(); track d.version) {
+              <option [value]="d.version" [selected]="d.version === datasetVersion()">{{ d.version }} · {{ d.images.toLocaleString('en-US') }} images</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-grid">
+          <div class="field">
+            <span class="field-label">
+              Epochs
+              <span class="info-tip" data-tip="Number of times the model goes through the entire training dataset.">
+                <app-icon name="info" [size]="13"></app-icon>
+              </span>
+            </span>
+            <input class="input" type="number" min="1" [value]="epochs()" (input)="onEpochs($event)" />
+          </div>
+          <div class="field">
+            <span class="field-label">
+              Batch size
+              <span class="info-tip" data-tip="Number of images processed before updating the model weights.">
+                <app-icon name="info" [size]="13"></app-icon>
+              </span>
+            </span>
+            <input class="input" type="number" min="1" [value]="batchSize()" (input)="onBatch($event)" />
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field-label">
+            Learning rate
+            <span class="info-tip" data-tip="Controls how large each update to the model weights is during training.">
+              <app-icon name="info" [size]="13"></app-icon>
+            </span>
+          </span>
+          <input class="input" [value]="learningRate()" (input)="onLr($event)" />
+        </div>
+
+        <div class="field">
+          <span class="field-label">
+            Optimizer
+            <span class="info-tip" data-tip="Algorithm used to update model weights during training.">
+              <app-icon name="info" [size]="13"></app-icon>
+            </span>
+          </span>
+          <select class="select" (change)="onOptimizer($event)">
+            @for (o of optimizers; track o) {
+              <option [value]="o" [selected]="o === optimizer()">{{ o }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <span class="field-label">
+            Loss function
+            <span class="info-tip" data-tip="Measures how far the model predictions are from the correct labels.">
+              <app-icon name="info" [size]="13"></app-icon>
+            </span>
+          </span>
+          <input class="input" value="Binary Cross Entropy" disabled />
+        </div>
+
+        <div class="field">
+          <span class="field-label">
+            Validation split
+            <span class="info-tip" data-tip="Percentage of the dataset reserved for validation during training.">
+              <app-icon name="info" [size]="13"></app-icon>
+            </span>
+          </span>
+          <input class="input" type="number" min="5" max="50" [value]="valSplitPct()" (input)="onValSplit($event)" />
+        </div>
+      </div>
+
+      <div class="field-group">
+        <span class="field-group-title">Advanced</span>
+
+        <div class="form-grid">
+          <div class="field">
+            <span class="field-label">
+              Weight decay
+              <span class="info-tip" data-tip="Regularization technique that helps reduce overfitting.">
+                <app-icon name="info" [size]="13"></app-icon>
+              </span>
+            </span>
+            <input class="input" [value]="weightDecay()" (input)="onWeightDecay($event)" />
+          </div>
+          <div class="field">
+            <span class="field-label">
+              LR scheduler
+              <span class="info-tip" data-tip="Adjusts the learning rate during training to improve model convergence.">
+                <app-icon name="info" [size]="13"></app-icon>
+              </span>
+            </span>
+            <select class="select" (change)="onScheduler($event)">
+              @for (s of schedulers; track s) {
+                <option [value]="s" [selected]="s === lrScheduler()">{{ s === 'reduce_on_plateau' ? 'Reduce on plateau' : s }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <label class="toggle-row">
+          <span class="field-label">
+            Early stopping
+            <span class="info-tip" data-tip="Stops training when validation performance stops improving.">
+              <app-icon name="info" [size]="13"></app-icon>
+            </span>
+          </span>
+          <input type="checkbox" [checked]="earlyStopping()" (change)="onToggle('earlyStopping', $event)" />
+        </label>
+
+        <div class="field">
+          <span class="field-label">
+            Random seed
+            <span class="info-tip" data-tip="Controls randomness so training results can be reproduced.">
+              <app-icon name="info" [size]="13"></app-icon>
+            </span>
+          </span>
+          <input class="input" type="number" min="0" [value]="seed()" (input)="onSeed($event)" />
+        </div>
+      </div>
+
+      <div class="field-group">
+        <span class="field-group-title">Data augmentation</span>
+
+        <label class="toggle-row">
+          <span class="field-label">
+            Horizontal flip
+            <span class="info-tip" data-tip="Randomly flips images horizontally to create additional training variations.">
+              <app-icon name="info" [size]="13"></app-icon>
+            </span>
+          </span>
+          <input type="checkbox" [checked]="flip()" (change)="onToggle('flip', $event)" />
+        </label>
+
+        <label class="toggle-row">
+          <span class="field-label">
+            Rotation (±15°)
+            <span class="info-tip" data-tip="Randomly rotates images to make the model more robust to image orientation.">
+              <app-icon name="info" [size]="13"></app-icon>
+            </span>
+          </span>
+          <input type="checkbox" [checked]="rotation()" (change)="onToggle('rotation', $event)" />
+        </label>
+
+        <label class="toggle-row">
+          <span class="field-label">
+            Color jitter
+            <span class="info-tip" data-tip="Randomly changes image brightness and contrast.">
+              <app-icon name="info" [size]="13"></app-icon>
+            </span>
+          </span>
+          <input type="checkbox" [checked]="colorJitter()" (change)="onToggle('colorJitter', $event)" />
+        </label>
+
+        <label class="toggle-row">
+          <span class="field-label">
+            Random crop
+            <span class="info-tip" data-tip="Randomly crops images to improve robustness to object position and framing.">
+              <app-icon name="info" [size]="13"></app-icon>
+            </span>
+          </span>
+          <input type="checkbox" [checked]="randomCrop()" (change)="onToggle('randomCrop', $event)" />
+        </label>
       </div>
 
       <button
@@ -97,8 +268,8 @@
         </thead>
         <tbody>
           @for (r of store.runs(); track r.id) {
-            <tr>
-              <td>
+            <tr class="row-clickable" (click)="toggleRun(r.id)">
+              <td (click)="$event.stopPropagation()">
                 <input
                   type="checkbox"
                   [checked]="selected().includes(r.id)"
@@ -124,6 +295,61 @@
               </td>
               <td>{{ formatShort(r.createdAt) }}</td>
             </tr>
+            @if (isExpanded(r.id)) {
+              <tr class="run-detail-row">
+                <td colspan="8">
+                  <div class="run-detail">
+                    <div class="run-detail-meta">
+                      <div class="stat">
+                        <span class="stat-label">Run ID</span>
+                        <span class="stat-value">{{ r.id }}</span>
+                      </div>
+                      <div class="stat">
+                        <span class="stat-label">Status</span>
+                        <span
+                          class="badge"
+                          [class.success]="r.status === 'finished'"
+                          [class.danger]="r.status === 'failed'"
+                          [class.info]="r.status === 'running'"
+                        >
+                          <span class="badge-dot"></span>{{ r.status }}
+                        </span>
+                      </div>
+                      <div class="stat">
+                        <span class="stat-label">Started</span>
+                        <span class="stat-value">{{ formatLong(r.createdAt) }}</span>
+                      </div>
+                      <div class="stat">
+                        <span class="stat-label">Duration</span>
+                        <span class="stat-value">{{ formatDuration(r.durationSeconds) }}</span>
+                      </div>
+                      <div class="stat">
+                        <span class="stat-label">Accuracy</span>
+                        <span class="stat-value">{{ r.accuracy != null ? r.accuracy + '%' : '—' }}</span>
+                      </div>
+                      <div class="stat">
+                        <span class="stat-label">Loss</span>
+                        <span class="stat-value">{{ r.loss != null ? r.loss : '—' }}</span>
+                      </div>
+                    </div>
+
+                    <div class="run-detail-grid">
+                      @for (g of detailGroups(r); track g.title) {
+                        <div class="run-detail-group">
+                          <h4>{{ g.title }}</h4>
+                          @for (row of g.rows; track row.label) {
+                            <dl class="detail-row">
+                              <dt>{{ row.label }}</dt>
+                              <dd>{{ row.value }}</dd>
+                            </dl>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            }
           }
         </tbody>
       </table>

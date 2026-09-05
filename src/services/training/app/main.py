@@ -38,6 +38,17 @@ class TrainRequest(BaseModel):
     batch_size: int | None = None
     learning_rate: float | None = None
     image_size: int | None = None
+    optimizer: str | None = None
+    validation_split: float | None = None
+    weight_decay: float | None = None
+    lr_scheduler: str | None = None
+    early_stopping: bool | None = None
+    pretrained: bool | None = None
+    seed: int | None = None
+    augment_flip: bool | None = None
+    augment_rotation: bool | None = None
+    augment_color_jitter: bool | None = None
+    augment_crop: bool | None = None
 
 
 # In-memory job registry (trainings are short-lived; persisted jobs would need a
@@ -143,6 +154,41 @@ def start_train(req: TrainRequest) -> dict:
             req.learning_rate if req.learning_rate is not None else settings.default_learning_rate
         ),
         "image_size": req.image_size or settings.default_image_size,
+        "optimizer": req.optimizer or settings.default_optimizer,
+        "validation_split": (
+            req.validation_split
+            if req.validation_split is not None
+            else settings.default_validation_split
+        ),
+        "weight_decay": (
+            req.weight_decay if req.weight_decay is not None else settings.default_weight_decay
+        ),
+        "lr_scheduler": req.lr_scheduler or settings.default_lr_scheduler,
+        "early_stopping": (
+            req.early_stopping
+            if req.early_stopping is not None
+            else settings.default_early_stopping
+        ),
+        "pretrained": (
+            req.pretrained if req.pretrained is not None else settings.default_pretrained
+        ),
+        "seed": req.seed if req.seed is not None else settings.default_seed,
+        "augment_flip": (
+            req.augment_flip if req.augment_flip is not None else settings.default_augment_flip
+        ),
+        "augment_rotation": (
+            req.augment_rotation
+            if req.augment_rotation is not None
+            else settings.default_augment_rotation
+        ),
+        "augment_color_jitter": (
+            req.augment_color_jitter
+            if req.augment_color_jitter is not None
+            else settings.default_augment_color_jitter
+        ),
+        "augment_crop": (
+            req.augment_crop if req.augment_crop is not None else settings.default_augment_crop
+        ),
     }
 
     job_id = uuid.uuid4().hex[:12]
@@ -228,6 +274,7 @@ def list_runs() -> dict:
                 "status": run.info.status,
                 "run_name": run.info.run_name,
                 "start_time": _iso_ms(run.info.start_time),
+                "end_time": _iso_ms(run.info.end_time),
                 "params": dict(run.data.params),
                 "metrics": dict(run.data.metrics),
             }

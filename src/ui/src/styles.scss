@@ -486,6 +486,50 @@ a {
   color: var(--muted-fg);
 }
 
+/* ---------- Tooltips ---------- */
+
+.info-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  margin-left: 2px;
+  color: var(--muted-fg);
+  cursor: help;
+}
+
+.info-tip app-icon {
+  display: inline-flex;
+}
+
+.info-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  width: 220px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--fg);
+  color: var(--card);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 6px 18px color-mix(in oklab, var(--fg) 30%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.info-tip:hover::after,
+.info-tip:focus-visible::after {
+  opacity: 1;
+}
+
 .input,
 .select {
   height: 36px;
@@ -797,6 +841,110 @@ a {
   padding: 8px 10px;
   border-radius: 8px;
   background: color-mix(in oklab, var(--danger) 10%, transparent);
+}
+
+/* ---------- Training page (grouped form + run detail) ---------- */
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.field-group:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.field-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-fg);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.toggle-row input[type='checkbox'],
+.toggle-switch {
+  width: 34px;
+  height: 20px;
+  accent-color: var(--primary);
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.row-clickable {
+  cursor: pointer;
+}
+
+.run-detail-row > td {
+  background: var(--muted);
+  padding: 0;
+  white-space: normal;
+}
+
+.run-detail {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.run-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.run-detail-meta .stat {
+  min-width: 96px;
+}
+
+.run-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px 24px;
+}
+
+.run-detail-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.run-detail-group h4 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-fg);
+  margin: 0 0 2px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.detail-row dt {
+  color: var(--muted-fg);
+}
+
+.detail-row dd {
+  margin: 0;
+  font-weight: 500;
+  text-align: right;
 }
 
 .dz-name {
