@@ -72,6 +72,11 @@ def build_model(
 
     inputs = tf.keras.Input(shape=(image_size, image_size, 3))
     x = _apply_augmentation(inputs, image_size, augment)
+    # ImageNet normalization. ``image_dataset_from_directory`` yields [0, 255]
+    # and MobileNetV2's ``include_preprocessing`` is off by default, so without
+    # this the pretrained trunk sees out-of-range inputs and its features are
+    # useless. This rescale is exactly ``mobilenet_v2.preprocess_input``.
+    x = tf.keras.layers.Rescaling(1.0 / 127.5, offset=-1.0)(x)
     x = base(x)
     x = tf.keras.layers.GlobalAveragePooling2D()(x)
     x = tf.keras.layers.Dropout(0.2)(x)

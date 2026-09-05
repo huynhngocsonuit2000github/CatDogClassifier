@@ -6,8 +6,11 @@ Exposes the MLflow Model Registry as a small REST API. Endpoints:
 - ``GET  /models``                                   — list every version (enriched).
 - ``POST /models/{name}/{version}/stage``            — move a version's stage.
 - ``POST /models/{name}/register``                   — backfill a trained run.
+- ``GET  /settings``                                 — read the promotion-gate thresholds.
+- ``PUT  /settings``                                 — update the promotion-gate thresholds.
 
-See ``registry.py`` for the external↔native stage mapping.
+See ``registry.py`` for the external↔native stage mapping and ``gate.py`` for
+the promotion gate.
 """
 from __future__ import annotations
 
@@ -19,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .config import Settings, get_settings
+from .gate import GateStore
 from .registry import EXTERNAL_STAGES, Registry, RegistryError
 
 logging.basicConfig(level=logging.INFO)
@@ -33,11 +37,18 @@ class RegisterRequest(BaseModel):
     run_id: str
 
 
+class GateSettingsRequest(BaseModel):
+    train_accuracy_min: float = 93.0
+    val_accuracy_min: float = 90.0
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
+    gate_store = GateStore(settings.gate_settings_path)
     app.state.settings = settings
-    app.state.registry = Registry(settings)
+    app.state.gate_store = gate_store
+    app.state.registry = Registry(settings, gate_store)
     logger.info("model-registry ready — mlflow at %s", settings.mlflow_tracking_uri)
     yield
 
@@ -92,3 +103,15 @@ def register(name: str, req: RegisterRequest) -> dict:
     except Exception as exc:  # noqa: BLE001
         logger.exception("register failed")
         raise HTTPException(502, detail=f"Registration failed: {exc}") from exc
+
+
+@app.get("/settings")
+def read_settings() -> dict:
+    gate_store: GateStore = app.state.gate_store
+    return gate_store.load()
+
+
+@app.put("/settings")
+def update_settings(req: GateSettingsRequest) -> dict:
+    gate_store: GateStore = app.state.gate_store
+    return gate_store.save(req.model_dump())

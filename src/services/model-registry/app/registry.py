@@ -19,6 +19,7 @@ import mlflow
 from mlflow.tracking import MlflowClient
 
 from .config import Settings
+from .gate import GateStore, evaluate_gate
 
 logger = logging.getLogger("model-registry")
 
@@ -69,8 +70,9 @@ def _version_num(version: str) -> str:
 class Registry:
     """Thin MLflow client wrapper with the stage mapping baked in."""
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, gate_store: GateStore) -> None:
         self.settings = settings
+        self._gate_store = gate_store
         mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
         self._client = MlflowClient(tracking_uri=settings.mlflow_tracking_uri)
 
@@ -100,6 +102,8 @@ class Registry:
 
         accuracy = metrics.get("accuracy")
         loss = metrics.get("loss")
+        val_accuracy = metrics.get("val_accuracy")
+        val_loss = metrics.get("val_loss")
         return {
             "name": mv.name,
             "version": f"v{mv.version}",
@@ -109,6 +113,9 @@ class Registry:
             "size_mb": round(self._model_size_mb(run_id), 1),
             "accuracy": round(accuracy * 100, 1) if accuracy is not None else 0.0,
             "loss": round(loss, 3) if loss is not None else 0.0,
+            "val_accuracy": round(val_accuracy * 100, 1) if val_accuracy is not None else None,
+            "val_loss": round(val_loss, 3) if val_loss is not None else None,
+            "gate": evaluate_gate(metrics, self._gate_store.load()),
         }
 
     def _model_size_mb(self, run_id: str) -> float:
@@ -162,15 +169,28 @@ class Registry:
         if stage == "Staging":
             if current != "Pending":
                 raise RegistryError(f"{name} v{native_version} is {current}, not Pending — cannot approve")
+            gate = self._evaluate_run_gate(mv.run_id)
+            if not gate["qualified"]:
+                raise RegistryError(
+                    f"{name} v{native_version} failed the promotion gate — {self._gate_fail_reason(gate)}"
+                )
             self._client.transition_model_version_stage(name, version_int, NATIVE_STAGING)
 
         elif stage == "Production":
-            # Simple model: promote the winner straight to Production, auto-archiving
-            # whoever currently holds it. Re-promoting the live version is a no-op.
+            # One-click promote: any qualified version may go straight to
+            # Production from Pending/Archived/Rejected. The hard gate still runs
+            # server-side, so a below-bar version can't slip through even if the
+            # client skips Approve. Re-promoting the live version is a no-op.
             if current != "Production":
+                gate = self._evaluate_run_gate(mv.run_id)
+                if not gate["qualified"]:
+                    raise RegistryError(
+                        f"{name} v{native_version} failed the promotion gate — {self._gate_fail_reason(gate)}"
+                    )
                 self._client.transition_model_version_stage(
                     name, version_int, NATIVE_PRODUCTION, archive_existing_versions=True
                 )
+                self._client.set_model_version_tag(name, version_int, REJECTED_TAG, "false")
 
         elif stage == "Rejected":
             if current not in ("Pending", "Staging"):
@@ -194,6 +214,23 @@ class Registry:
             raise RegistryError(f"Unknown stage {stage!r}")
 
         return self.list_models()
+
+    def _evaluate_run_gate(self, run_id: str) -> dict:
+        """Re-run the promotion gate on a version's source run (hard-gate check)."""
+        try:
+            run = self._client.get_run(run_id)
+        except Exception as exc:  # noqa: BLE001 — surface unreadable runs clearly
+            raise RegistryError(f"cannot read run {run_id} metrics: {exc}") from exc
+        return evaluate_gate(run.data.metrics, self._gate_store.load())
+
+    @staticmethod
+    def _gate_fail_reason(gate: dict) -> str:
+        """Human-readable list of which gate checks fell short."""
+        return ", ".join(
+            f"{c['label']} {c['value'] if c['value'] is not None else 'n/a'}% "
+            f"(min {c['threshold']}%)"
+            for c in gate["checks"]
+        )
 
     def _find_version(self, name: str, version: str):
         target = _version_num(version)

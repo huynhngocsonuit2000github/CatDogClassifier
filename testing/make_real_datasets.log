@@ -1,0 +1,52 @@
+cats: already have 1754 images, nothing to collect
+dogs: collecting unique images (have 0, want 1750)…
+  dogs: 1222 unique after 25 calls
+dogs: collection done — 1781 unique images
+cats: 1754 images to download (0 already cached)
+  cats: downloaded 100 new images
+  cats: downloaded 200 new images
+  cats: downloaded 300 new images
+  cats: downloaded 400 new images
+  cats: downloaded 500 new images
+  cats: downloaded 600 new images
+  cats: downloaded 700 new images
+  cats: downloaded 800 new images
+  cats: downloaded 900 new images
+  cats: downloaded 1000 new images
+  cats: downloaded 1100 new images
+  cats: downloaded 1200 new images
+  cats: downloaded 1300 new images
+  cats: downloaded 1400 new images
+  cats: downloaded 1500 new images
+  cats: downloaded 1600 new images
+  cats: downloaded 1700 new images
+cats: download done — 1754 new, 1754 total on disk
+dogs: 1781 images to download (0 already cached)
+  dogs: downloaded 100 new images
+  dogs: downloaded 200 new images
+  dogs: downloaded 300 new images
+  dogs: downloaded 400 new images
+  dogs: downloaded 500 new images
+  dogs: downloaded 600 new images
+  dogs: downloaded 700 new images
+  dogs: downloaded 800 new images
+  dogs: downloaded 900 new images
+  dogs: downloaded 1000 new images
+  dogs: downloaded 1100 new images
+  dogs: downloaded 1200 new images
+  dogs: downloaded 1300 new images
+  dogs: downloaded 1400 new images
+  dogs: downloaded 1500 new images
+  dogs: downloaded 1600 new images
+  dogs: downloaded 1700 new images
+dogs: download done — 1781 new, 1781 total on disk
+cats: 1754 good images on disk (need 1650)
+dogs: 1781 good images on disk (need 1650)
+  wrote dataset-100-1.zip (1,256,319 bytes: 50 cats + 50 dogs)
+  wrote dataset-100-2.zip (1,205,251 bytes: 50 cats + 50 dogs)
+  wrote dataset-100-3.zip (1,203,079 bytes: 50 cats + 50 dogs)
+  wrote dataset-1000-1.zip (12,959,378 bytes: 500 cats + 500 dogs)
+  wrote dataset-1000-2.zip (13,008,656 bytes: 500 cats + 500 dogs)
+  wrote dataset-1000-3.zip (12,661,735 bytes: 500 cats + 500 dogs)
+
+Done — 6 archives in D:\me\TMA AI\CatDogClassifier\testing\data

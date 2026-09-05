@@ -2,6 +2,8 @@ import {
   Arch,
   ChartPoint,
   DatasetVersion,
+  GateResult,
+  GateSettings,
   ModelVersion,
   Prediction,
   RunStatus,
@@ -91,13 +93,35 @@ export const SEED_RUNS: TrainingRun[] = RUN_SPECS.map((spec, i) => {
   };
 });
 
+export const SEED_GATE_SETTINGS: GateSettings = { trainAccuracyMin: 93, valAccuracyMin: 90 };
+
+function seedGate(train: number, val: number | null, trainMin = 93, valMin = 90): GateResult {
+  const checks = [
+    {
+      key: 'train_accuracy',
+      label: 'Training accuracy',
+      value: train,
+      threshold: trainMin,
+      passed: train >= trainMin,
+    },
+    {
+      key: 'val_accuracy',
+      label: 'Validation accuracy',
+      value: val,
+      threshold: valMin,
+      passed: val != null && val >= valMin,
+    },
+  ];
+  return { qualified: checks.every((c) => c.passed), checks };
+}
+
 export const SEED_MODELS: ModelVersion[] = [
-  { name: 'CatDogClassifier', version: 'v1', stage: 'Archived', runId: 'run-003', datasetVersion: 'v2', sizeMb: 98, accuracy: 92.1, loss: 0.401 },
-  { name: 'CatDogClassifier', version: 'v2', stage: 'Archived', runId: 'run-009', datasetVersion: 'v3', sizeMb: 98, accuracy: 94.0, loss: 0.288 },
-  { name: 'CatDogClassifier', version: 'v3', stage: 'Production', runId: 'run-018', datasetVersion: 'v6', sizeMb: 102, accuracy: 96.4, loss: 0.182 },
-  { name: 'CatDogClassifier', version: 'v4', stage: 'Staging', runId: 'run-019', datasetVersion: 'v5', sizeMb: 41, accuracy: 96.6, loss: 0.176 },
-  { name: 'CatDogClassifier', version: 'v5', stage: 'Pending', runId: 'run-020', datasetVersion: 'v5', sizeMb: 102, accuracy: 96.5, loss: 0.179 },
-  { name: 'CatDogClassifier-lite', version: 'v1', stage: 'Pending', runId: 'run-016', datasetVersion: 'v5', sizeMb: 22, accuracy: 94.8, loss: 0.244 },
+  { name: 'CatDogClassifier', version: 'v1', stage: 'Archived', runId: 'run-003', datasetVersion: 'v2', sizeMb: 98, accuracy: 92.1, loss: 0.401, valAccuracy: 90.2, gate: seedGate(92.1, 90.2) },
+  { name: 'CatDogClassifier', version: 'v2', stage: 'Archived', runId: 'run-009', datasetVersion: 'v3', sizeMb: 98, accuracy: 94.0, loss: 0.288, valAccuracy: 92.1, gate: seedGate(94.0, 92.1) },
+  { name: 'CatDogClassifier', version: 'v3', stage: 'Production', runId: 'run-018', datasetVersion: 'v6', sizeMb: 102, accuracy: 96.4, loss: 0.182, valAccuracy: 95.8, gate: seedGate(96.4, 95.8) },
+  { name: 'CatDogClassifier', version: 'v4', stage: 'Staging', runId: 'run-019', datasetVersion: 'v5', sizeMb: 41, accuracy: 96.6, loss: 0.176, valAccuracy: 96.0, gate: seedGate(96.6, 96.0) },
+  { name: 'CatDogClassifier', version: 'v5', stage: 'Pending', runId: 'run-020', datasetVersion: 'v5', sizeMb: 102, accuracy: 96.5, loss: 0.179, valAccuracy: 95.6, gate: seedGate(96.5, 95.6) },
+  { name: 'CatDogClassifier-lite', version: 'v1', stage: 'Pending', runId: 'run-016', datasetVersion: 'v5', sizeMb: 22, accuracy: 94.8, loss: 0.244, valAccuracy: 88.4, gate: seedGate(94.8, 88.4) },
 ];
 
 export const SEED_PREDICTIONS: Prediction[] = [

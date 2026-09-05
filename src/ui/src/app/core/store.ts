@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { EMPTY, Observable, catchError, of, tap } from 'rxjs';
 import {
   DatasetVersion,
+  GateSettings,
   ModelStage,
   ModelVersion,
   Prediction,
@@ -11,6 +12,7 @@ import {
 import {
   SEED_CHART,
   SEED_DATASETS,
+  SEED_GATE_SETTINGS,
   SEED_MODELS,
   SEED_PREDICTIONS,
   SEED_RUNS,
@@ -28,6 +30,7 @@ export class AppStore {
   readonly datasets = signal<DatasetVersion[]>(USE_MOCK ? SEED_DATASETS : []);
   readonly runs = signal<TrainingRun[]>(USE_MOCK ? SEED_RUNS : []);
   readonly models = signal<ModelVersion[]>(USE_MOCK ? SEED_MODELS : []);
+  readonly gateSettings = signal<GateSettings>(SEED_GATE_SETTINGS);
   readonly predictions = signal<Prediction[]>(USE_MOCK ? SEED_PREDICTIONS : []);
   readonly chart = signal(SEED_CHART);
 
@@ -49,6 +52,7 @@ export class AppStore {
       this.loadDatasets();
       this.loadRuns();
       this.loadModels();
+      this.loadGateSettings();
     }
   }
 
@@ -212,6 +216,16 @@ export class AppStore {
     this.setStage(name, version, 'Production');
   }
 
+  /** Approve a Pending candidate into Staging (server-side hard gate on approve). */
+  approve(name: string, version: string): void {
+    this.setStage(name, version, 'Staging');
+  }
+
+  /** Reject a Pending/Staging candidate. */
+  reject(name: string, version: string): void {
+    this.setStage(name, version, 'Rejected');
+  }
+
   /** Load registered models from the Registry service (Step 3). */
   loadModels(): void {
     if (USE_MOCK) {
@@ -224,6 +238,32 @@ export class AppStore {
         this.models.set(list);
         this.modelsError.set('');
       },
+      error: (err) => this.modelsError.set(this.detailOf(err)),
+    });
+  }
+
+  /** Load the promotion-gate thresholds from the Registry service (Step 3). */
+  loadGateSettings(): void {
+    if (USE_MOCK) {
+      this.gateSettings.set(SEED_GATE_SETTINGS);
+      return;
+    }
+    this.registryApi.getSettings().subscribe({
+      next: (settings) => this.gateSettings.set(settings),
+      error: () => {
+        // Keep current values; the settings panel still lets the user retry.
+      },
+    });
+  }
+
+  /** Persist new promotion-gate thresholds. */
+  saveGateSettings(settings: GateSettings): void {
+    if (USE_MOCK) {
+      this.gateSettings.set(settings);
+      return;
+    }
+    this.registryApi.saveSettings(settings).subscribe({
+      next: (saved) => this.gateSettings.set(saved),
       error: (err) => this.modelsError.set(this.detailOf(err)),
     });
   }

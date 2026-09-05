@@ -6,6 +6,7 @@ import {
   Arch,
   DatasetStatus,
   DatasetVersion,
+  GateSettings,
   ModelStage,
   ModelVersion,
   Prediction,
@@ -256,6 +257,15 @@ export class TrainingApi {
 /** Base URL of the Model Registry service (Step 3). See RegistryApi docs. */
 const REGISTRY_BASE_URL = environment.registryUrl;
 
+/** Wire shape of one gate check from `GET /models` (snake_case). */
+interface GateCheckDto {
+  key: string;
+  label: string;
+  value: number | null;
+  threshold: number;
+  passed: boolean;
+}
+
 /** Wire shape of one model version from `GET /models` (snake_case). */
 interface ModelDto {
   name: string;
@@ -266,6 +276,9 @@ interface ModelDto {
   size_mb: number;
   accuracy: number;
   loss: number;
+  val_accuracy: number | null;
+  val_loss: number | null;
+  gate: { qualified: boolean; checks: GateCheckDto[] };
 }
 
 const MODEL_STAGES: ModelStage[] = ['Pending', 'Staging', 'Production', 'Archived', 'Rejected'];
@@ -284,6 +297,8 @@ function toModel(dto: ModelDto): ModelVersion {
     sizeMb: dto.size_mb,
     accuracy: dto.accuracy,
     loss: dto.loss,
+    valAccuracy: dto.val_accuracy ?? null,
+    gate: dto.gate ?? { qualified: false, checks: [] },
   };
 }
 
@@ -316,6 +331,38 @@ export class RegistryApi {
         { run_id: runId },
       )
       .pipe(map((res) => (res.models ?? []).map(toModel)));
+  }
+
+  /** `GET /settings` — the promotion-gate thresholds (percent). */
+  getSettings(): Observable<GateSettings> {
+    return this.http
+      .get<{ train_accuracy_min: number; val_accuracy_min: number }>(
+        `${REGISTRY_BASE_URL}/settings`,
+      )
+      .pipe(
+        map((s) => ({
+          trainAccuracyMin: s.train_accuracy_min,
+          valAccuracyMin: s.val_accuracy_min,
+        })),
+      );
+  }
+
+  /** `PUT /settings` — persist new promotion-gate thresholds (percent). */
+  saveSettings(settings: GateSettings): Observable<GateSettings> {
+    return this.http
+      .put<{ train_accuracy_min: number; val_accuracy_min: number }>(
+        `${REGISTRY_BASE_URL}/settings`,
+        {
+          train_accuracy_min: settings.trainAccuracyMin,
+          val_accuracy_min: settings.valAccuracyMin,
+        },
+      )
+      .pipe(
+        map((s) => ({
+          trainAccuracyMin: s.train_accuracy_min,
+          valAccuracyMin: s.val_accuracy_min,
+        })),
+      );
   }
 }
 

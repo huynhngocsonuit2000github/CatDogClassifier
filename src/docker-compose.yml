@@ -86,15 +86,19 @@ services:
 
   # Model Registry service (Step 3). Wraps the MLflow Model Registry so the
   # platform can version + stage CatDogClassifier models (Pending → Staging →
-  # Production → Archived). Stateless — no volumes, just an MLflow client.
+  # Production → Archived) and enforce the promotion gate. Keeps one small file
+  # — the editable gate thresholds — in a named volume.
   model-registry:
     build: ./services/model-registry
     depends_on:
       - mlflow
     environment:
       MLFLOW_TRACKING_URI: http://mlflow:5000
+      DATA_DIR: /app/data
     ports:
       - "8102:8002"
+    volumes:
+      - registry_data:/app/data
     restart: on-failure
 
   # Prediction service (Step 4). Serves the current Production model
@@ -134,3 +138,4 @@ volumes:
   data_repo:
   mlflow_store:
   predictions_data:
+  registry_data:

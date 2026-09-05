@@ -1003,3 +1003,92 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Registry: promotion gate ---------- */
+
+.gate-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.gate-settings-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gate-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted-fg);
+}
+
+.gate-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.gate-result {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--muted);
+}
+
+.gate-verdict {
+  display: flex;
+}
+
+.gate-checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gate-check-row {
+  display: grid;
+  grid-template-columns: 16px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.gate-check-mark {
+  width: 16px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.gate-check-row.pass .gate-check-mark {
+  color: var(--success);
+}
+
+.gate-check-row.fail .gate-check-mark {
+  color: var(--danger);
+}
+
+.gate-check-label {
+  color: var(--muted-fg);
+}
+
+.gate-check-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.gate-check-threshold {
+  color: var(--muted-fg);
+  font-variant-numeric: tabular-nums;
+}

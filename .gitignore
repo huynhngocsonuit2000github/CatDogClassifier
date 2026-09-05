@@ -1,1 +1,8 @@
 src/services/**/.venv
+testing/data/dataset-100-1.zip
+testing/data/dataset-100-2.zip
+testing/data/dataset-100-3.zip
+testing/data/dataset-1000-1.zip
+testing/data/dataset-1000-2.zip
+testing/data/dataset-1000-3.zip
+testing/data/_pool

@@ -55,6 +55,25 @@ export interface TrainingRun {
   durationSeconds: number | null;
 }
 
+export interface GateCheck {
+  key: string; // "train_accuracy" | "val_accuracy"
+  label: string; // "Training accuracy"
+  value: number | null; // percent; null when the run logged no such metric
+  threshold: number; // percent floor it must clear
+  passed: boolean;
+}
+
+export interface GateResult {
+  qualified: boolean;
+  checks: GateCheck[];
+}
+
+/** Promotion-gate floors (percent), editable from the Registry page. */
+export interface GateSettings {
+  trainAccuracyMin: number;
+  valAccuracyMin: number;
+}
+
 export interface ModelVersion {
   name: string; // "CatDogClassifier" | "CatDogClassifier-lite"
   version: string; // "v3"
@@ -64,6 +83,8 @@ export interface ModelVersion {
   sizeMb: number;
   accuracy: number;
   loss: number;
+  valAccuracy: number | null; // percent
+  gate: GateResult;
 }
 
 export interface Prediction {

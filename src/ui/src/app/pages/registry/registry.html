@@ -1,12 +1,48 @@
 <div class="page-head">
   <h1 class="page-title">Registered models</h1>
-  <p class="page-sub">Promote the version you want to serve — it instantly replaces the current production model.</p>
+  <p class="page-sub">Approve a qualified candidate, then promote the winner to production.</p>
 </div>
 
 <div class="row-between" style="margin-bottom: 12px">
   <span></span>
   <button class="btn btn-outline btn-sm" (click)="store.loadModels()">Refresh</button>
 </div>
+
+<section class="gate-settings">
+  <div class="gate-settings-head">
+    <h2 class="field-group-title">Promotion gate</h2>
+    <p class="gate-hint">Hard gate — a candidate can be approved only if it clears both accuracy floors.</p>
+  </div>
+  <div class="form-grid">
+    <div class="field">
+      <span class="field-label">Training accuracy min (%)</span>
+      <input
+        class="input"
+        type="number"
+        min="0"
+        max="100"
+        step="0.1"
+        [value]="trainMinPct()"
+        (input)="onTrainMin($event)"
+      />
+    </div>
+    <div class="field">
+      <span class="field-label">Validation accuracy min (%)</span>
+      <input
+        class="input"
+        type="number"
+        min="0"
+        max="100"
+        step="0.1"
+        [value]="valMinPct()"
+        (input)="onValMin($event)"
+      />
+    </div>
+  </div>
+  <div class="gate-settings-actions">
+    <button class="btn btn-primary btn-sm" (click)="saveSettings()">Save thresholds</button>
+  </div>
+</section>
 
 @if (store.modelsError()) {
   <div class="form-error" style="margin-bottom: 12px">{{ store.modelsError() }}</div>
@@ -38,19 +74,55 @@
           <span class="stat-value">{{ m.accuracy }}%</span>
         </div>
         <div class="stat">
+          <span class="stat-label">Val accuracy</span>
+          <span class="stat-value">{{ m.valAccuracy == null ? '—' : m.valAccuracy + '%' }}</span>
+        </div>
+        <div class="stat">
           <span class="stat-label">Loss</span>
           <span class="stat-value">{{ m.loss }}</span>
         </div>
       </div>
 
+      @if (m.stage === 'Pending') {
+        <div class="gate-result">
+          <div class="gate-verdict">
+            <span class="badge" [class.success]="m.gate.qualified" [class.danger]="!m.gate.qualified">
+              {{ m.gate.qualified ? '✓ Qualified' : '✗ Failed gate' }}
+            </span>
+          </div>
+          <ul class="gate-checks">
+            @for (c of m.gate.checks; track c.key) {
+              <li class="gate-check-row" [class.pass]="c.passed" [class.fail]="!c.passed">
+                <span class="gate-check-mark">{{ c.passed ? '✓' : '✗' }}</span>
+                <span class="gate-check-label">{{ c.label }}</span>
+                <span class="gate-check-value">{{ c.value == null ? '—' : c.value + '%' }}</span>
+                <span class="gate-check-threshold">≥ {{ c.threshold }}%</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
       <div class="model-actions">
-        <button
-          class="btn btn-primary btn-sm"
-          [disabled]="!canPromote(m)"
-          (click)="store.promote(m.name, m.version)"
-        >
-          Promote to production
-        </button>
+        @if (m.stage === 'Pending') {
+          <button
+            class="btn btn-primary btn-sm"
+            [disabled]="!canApprove(m)"
+            (click)="store.approve(m.name, m.version)"
+          >
+            Approve
+          </button>
+        }
+        @if (canReject(m)) {
+          <button class="btn btn-outline btn-sm" (click)="store.reject(m.name, m.version)">
+            Reject
+          </button>
+        }
+        @if (canPromote(m)) {
+          <button class="btn btn-primary btn-sm" (click)="store.promote(m.name, m.version)">
+            Promote to production
+          </button>
+        }
       </div>
     </article>
   }
